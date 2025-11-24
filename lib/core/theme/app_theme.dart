@@ -1,24 +1,40 @@
 import 'package:flutter/material.dart';
+import 'colors.dart';
 
 class AppTheme {
   static final ThemeData lightTheme = ThemeData(
     primarySwatch: Colors.blue,
-    useMaterial3: true,
+    primaryColor: AppColors.primary,
+    scaffoldBackgroundColor: AppColors.background,
     appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.white,
-      foregroundColor: Colors.black,
-      elevation: 0,
+      backgroundColor: AppColors.primary,
+      foregroundColor: Colors.white,
     ),
-    inputDecorationTheme: InputDecorationTheme(
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+    floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      backgroundColor: AppColors.primary,
+    ),
+    cardTheme: CardThemeData(
+      // ← УБРАН const
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
       ),
     ),
   );
 
   static final ThemeData darkTheme = ThemeData(
     primarySwatch: Colors.blue,
-    useMaterial3: true,
-    brightness: Brightness.dark,
+    primaryColor: AppColors.primary,
+    scaffoldBackgroundColor: Colors.grey[900],
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Colors.grey,
+    ),
+    cardTheme: CardThemeData(
+      // ← УБРАН const
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+    ),
   );
 }

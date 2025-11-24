@@ -1,5 +1,5 @@
-name: quiz_app
-description: A Flutter quiz application for educational purposes
+name: flutter_quiz
+description: "Мобильное приложение для интерактивных квизов"
 
 publish_to: 'none'
 
@@ -11,13 +11,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  provider: ^6.1.1
-  # Для следующих этапов:
-  # firebase_core: ^2.24.0
-  # firebase_auth: ^4.17.2
-  # cloud_firestore: ^4.13.0
-  # http: ^1.1.0
+
+  cupertino_icons: ^1.0.2
+  provider: ^6.0.5
+  shared_preferences: ^2.2.2
+  http: ^1.1.0
   # file_picker: ^5.5.0
+  syncfusion_flutter_charts: ^23.1.44
+  intl: ^0.18.1
 
 dev_dependencies:
   flutter_test:
@@ -27,4 +28,4 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/
+    - assets/

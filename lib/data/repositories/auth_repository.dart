@@ -1,57 +1,92 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/user_model.dart';
 
 class AuthRepository with ChangeNotifier {
-  User? _currentUser;
+  bool _isAuthenticated = false;
   bool _isLoading = false;
+  User? _currentUser;
 
-  User? get currentUser => _currentUser;
+  bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
-  bool get isLoggedIn => _currentUser != null;
-  bool get isTeacher => _currentUser?.role == 'teacher';
+  User? get currentUser => _currentUser;
 
-  Future<bool> login(String email, String password) async {
+  AuthRepository() {
+    _loadAuthState();
+  }
+
+  Future<void> _loadAuthState() async {
     _isLoading = true;
     notifyListeners();
 
-    // TODO: Реализовать реальную авторизацию через Firebase/Backend
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token != null) {
+      _isAuthenticated = true;
+      // Загрузка данных пользователя
+      _currentUser = User(
+        id: '1',
+        email: 'teacher@example.com',
+        name: 'Учитель',
+        role: 'teacher',
+      );
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> login(String email, String password) async {
+    _isLoading = true;
+    notifyListeners();
+
+    // Имитация API запроса
     await Future.delayed(const Duration(seconds: 2));
 
-    // Временная заглушка для тестирования
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('token', 'demo_token');
+
+    _isAuthenticated = true;
     _currentUser = User(
       id: '1',
       email: email,
-      name: 'Test User',
-      role: email.contains('teacher') ? 'teacher' : 'student',
-      createdAt: DateTime.now(),
+      name: 'Учитель',
+      role: 'teacher',
     );
 
     _isLoading = false;
     notifyListeners();
-    return true;
   }
 
-  Future<bool> register(String email, String password, String name, String role) async {
+  Future<void> register(String email, String password) async {
     _isLoading = true;
     notifyListeners();
 
-    // TODO: Реализовать реальную регистрацию
+    // Имитация API запроса
     await Future.delayed(const Duration(seconds: 2));
 
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('token', 'demo_token');
+
+    _isAuthenticated = true;
     _currentUser = User(
       id: '1',
       email: email,
-      name: name,
-      role: role,
-      createdAt: DateTime.now(),
+      name: 'Новый пользователь',
+      role: 'teacher',
     );
 
     _isLoading = false;
     notifyListeners();
-    return true;
   }
 
-  void logout() {
+  Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+
+    _isAuthenticated = false;
     _currentUser = null;
     notifyListeners();
   }

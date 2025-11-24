@@ -2,94 +2,89 @@ class Quiz {
   final String id;
   final String title;
   final String description;
-  final String createdBy;
+  final String subject;
   final List<Question> questions;
+  final int duration; // в минутах
   final DateTime? scheduledAt;
-  final String? pinCode;
-  final int duration; // in minutes
-  final DateTime createdAt;
+  final bool isActive;
 
   Quiz({
     required this.id,
     required this.title,
     required this.description,
-    required this.createdBy,
+    required this.subject,
     required this.questions,
-    this.scheduledAt,
-    this.pinCode,
     this.duration = 30,
-    required this.createdAt,
+    this.scheduledAt,
+    this.isActive = false,
   });
 
-  factory Quiz.fromMap(Map<String, dynamic> map) {
+  factory Quiz.fromJson(Map<String, dynamic> json) {
     return Quiz(
-      id: map['id'] ?? '',
-      title: map['title'] ?? '',
-      description: map['description'] ?? '',
-      createdBy: map['createdBy'] ?? '',
-      questions: (map['questions'] as List? ?? [])
-          .map((q) => Question.fromMap(q))
-          .toList(),
-      scheduledAt: map['scheduledAt'] != null 
-          ? DateTime.parse(map['scheduledAt']) 
+      id: json['id'],
+      title: json['title'],
+      description: json['description'],
+      subject: json['subject'],
+      questions:
+          (json['questions'] as List).map((q) => Question.fromJson(q)).toList(),
+      duration: json['duration'],
+      scheduledAt: json['scheduledAt'] != null
+          ? DateTime.parse(json['scheduledAt'])
           : null,
-      pinCode: map['pinCode'],
-      duration: map['duration'] ?? 30,
-      createdAt: DateTime.parse(map['createdAt']),
+      isActive: json['isActive'] ?? false,
     );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'title': title,
-      'description': description,
-      'createdBy': createdBy,
-      'questions': questions.map((q) => q.toMap()).toList(),
-      'scheduledAt': scheduledAt?.toIso8601String(),
-      'pinCode': pinCode,
-      'duration': duration,
-      'createdAt': createdAt.toIso8601String(),
-    };
   }
 }
 
 class Question {
   final String id;
   final String text;
-  final List<String> options;
-  final List<int> correctAnswers; // индексы правильных ответов
-  final String type; // 'single', 'multiple', 'text'
+  final QuestionType type;
+  final List<Answer> answers;
   final int points;
 
   Question({
     required this.id,
     required this.text,
-    required this.options,
-    required this.correctAnswers,
     required this.type,
+    required this.answers,
     this.points = 1,
   });
 
-  factory Question.fromMap(Map<String, dynamic> map) {
+  factory Question.fromJson(Map<String, dynamic> json) {
     return Question(
-      id: map['id'] ?? '',
-      text: map['text'] ?? '',
-      options: List<String>.from(map['options'] ?? []),
-      correctAnswers: List<int>.from(map['correctAnswers'] ?? []),
-      type: map['type'] ?? 'single',
-      points: map['points'] ?? 1,
+      id: json['id'],
+      text: json['text'],
+      type: QuestionType.values[json['type']],
+      answers:
+          (json['answers'] as List).map((a) => Answer.fromJson(a)).toList(),
+      points: json['points'] ?? 1,
     );
   }
+}
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'text': text,
-      'options': options,
-      'correctAnswers': correctAnswers,
-      'type': type,
-      'points': points,
-    };
+class Answer {
+  final String id;
+  final String text;
+  final bool isCorrect;
+
+  Answer({
+    required this.id,
+    required this.text,
+    required this.isCorrect,
+  });
+
+  factory Answer.fromJson(Map<String, dynamic> json) {
+    return Answer(
+      id: json['id'],
+      text: json['text'],
+      isCorrect: json['isCorrect'] ?? false,
+    );
   }
+}
+
+enum QuestionType {
+  singleChoice,
+  multipleChoice,
+  textAnswer,
 }

@@ -346,7 +346,7 @@ class _AddQuestionDialogState extends State<AddQuestionDialog> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<QuestionType>(
-              value: _selectedType,
+              initialValue: _selectedType,
               items: QuestionType.values.map((type) {
                 return DropdownMenuItem(
                   value: type,

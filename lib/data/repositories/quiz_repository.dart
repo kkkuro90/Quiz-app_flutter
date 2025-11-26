@@ -1,63 +1,58 @@
 import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/quiz_model.dart';
 import '../models/quiz_result_model.dart';
 
+/// QuizRepository: базовый Quiz API (CRUD) на Firestore
 class QuizRepository with ChangeNotifier {
+  final FirebaseFirestore _db;
+
   final List<Quiz> _quizzes = [];
   final List<QuizResult> _results = [];
 
-  List<Quiz> get quizzes => _quizzes;
-  List<QuizResult> get results => _results;
+  List<Quiz> get quizzes => List.unmodifiable(_quizzes);
+  List<QuizResult> get results => List.unmodifiable(_results);
 
-  QuizRepository() {
-    _loadDemoData();
+  QuizRepository({FirebaseFirestore? firestore})
+      : _db = firestore ?? FirebaseFirestore.instance {
+    _listenQuizzes();
   }
 
-  void _loadDemoData() {
-    _quizzes.addAll([
-      Quiz(
-        id: '1',
-        title: 'Математика - Основы алгебры',
-        description: 'Тест по основам алгебры для 7 класса',
-        subject: 'Математика',
-        questions: [
-          Question(
-            id: '1',
-            text: 'Решите уравнение: 2x + 5 = 15',
-            type: QuestionType.singleChoice,
-            answers: [
-              Answer(id: '1', text: 'x = 5', isCorrect: true),
-              Answer(id: '2', text: 'x = 10', isCorrect: false),
-              Answer(id: '3', text: 'x = 7.5', isCorrect: false),
-            ],
+  void _listenQuizzes() {
+    _db.collection('quizzes').snapshots().listen((snapshot) {
+      _quizzes
+        ..clear()
+        ..addAll(
+          snapshot.docs.map(
+            (doc) => Quiz.fromJson({
+              'id': doc.id,
+              ...doc.data(),
+            }),
           ),
-        ],
-      ),
-    ]);
+        );
+      notifyListeners();
+    });
   }
 
   Future<void> createQuiz(Quiz quiz) async {
-    _quizzes.add(quiz);
-    notifyListeners();
+    final data = quiz.toJson();
+    await _db.collection('quizzes').add(data..remove('id'));
   }
 
   Future<void> updateQuiz(Quiz quiz) async {
-    final index = _quizzes.indexWhere((q) => q.id == quiz.id);
-    if (index != -1) {
-      _quizzes[index] = quiz;
-      notifyListeners();
-    }
+    if (quiz.id.isEmpty) return;
+    await _db.collection('quizzes').doc(quiz.id).update(quiz.toJson());
   }
 
   Future<void> deleteQuiz(String quizId) async {
-    _quizzes.removeWhere((q) => q.id == quizId);
-    notifyListeners();
+    await _db.collection('quizzes').doc(quizId).delete();
   }
 
   Future<void> addResult(QuizResult result) async {
     _results.add(result);
     notifyListeners();
+    // при желании здесь можно добавить сохранение результатов в БД
   }
 
   List<QuizResult> getResultsByQuiz(String quizId) {

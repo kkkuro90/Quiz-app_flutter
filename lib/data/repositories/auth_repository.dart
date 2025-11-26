@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import '../models/user_model.dart';
 
+/// AuthRepository: обертка над Firebase Auth (email/password)
 class AuthRepository with ChangeNotifier {
+  final fb.FirebaseAuth _auth;
+
   bool _isAuthenticated = false;
   bool _isLoading = false;
   User? _currentUser;
@@ -12,7 +14,8 @@ class AuthRepository with ChangeNotifier {
   bool get isLoading => _isLoading;
   User? get currentUser => _currentUser;
 
-  AuthRepository() {
+  AuthRepository({fb.FirebaseAuth? firebaseAuth})
+      : _auth = firebaseAuth ?? fb.FirebaseAuth.instance {
     _loadAuthState();
   }
 
@@ -20,72 +23,71 @@ class AuthRepository with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token != null) {
+    final fbUser = _auth.currentUser;
+    if (fbUser != null) {
       _isAuthenticated = true;
-      // Загрузка данных пользователя
-      _currentUser = User(
-        id: '1',
-        email: 'teacher@example.com',
-        name: 'Учитель',
-        role: 'teacher',
-      );
+      _currentUser = _userFromFirebase(fbUser);
     }
 
     _isLoading = false;
     notifyListeners();
   }
 
+  User _userFromFirebase(fb.User fbUser) {
+    return User(
+      id: fbUser.uid,
+      email: fbUser.email ?? '',
+      name: fbUser.displayName ?? fbUser.email ?? 'Пользователь',
+      role: 'teacher', // для демо: можно хранить в Firestore профиле
+      createdAt: fbUser.metadata.creationTime,
+      updatedAt: fbUser.metadata.lastSignInTime,
+    );
+  }
+
   Future<void> login(String email, String password) async {
     _isLoading = true;
     notifyListeners();
 
-    // Имитация API запроса
-    await Future.delayed(const Duration(seconds: 2));
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', 'demo_token');
-
-    _isAuthenticated = true;
-    _currentUser = User(
-      id: '1',
-      email: email,
-      name: 'Учитель',
-      role: 'teacher',
-    );
-
-    _isLoading = false;
-    notifyListeners();
+    try {
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      _currentUser = _userFromFirebase(credential.user!);
+      _isAuthenticated = true;
+    } on fb.FirebaseAuthException {
+      _isAuthenticated = false;
+      _currentUser = null;
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> register(String email, String password) async {
     _isLoading = true;
     notifyListeners();
 
-    // Имитация API запроса
-    await Future.delayed(const Duration(seconds: 2));
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', 'demo_token');
-
-    _isAuthenticated = true;
-    _currentUser = User(
-      id: '1',
-      email: email,
-      name: 'Новый пользователь',
-      role: 'teacher',
-    );
-
-    _isLoading = false;
-    notifyListeners();
+    try {
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      _currentUser = _userFromFirebase(credential.user!);
+      _isAuthenticated = true;
+    } on fb.FirebaseAuthException {
+      _isAuthenticated = false;
+      _currentUser = null;
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
-
+    await _auth.signOut();
     _isAuthenticated = false;
     _currentUser = null;
     notifyListeners();

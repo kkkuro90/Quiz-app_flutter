@@ -1,19 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-class GradeSettingsScreen extends StatefulWidget {
+import '../controllers/teacher_dashboard_controller.dart';
+
+class GradeSettingsScreen extends StatelessWidget {
   const GradeSettingsScreen({super.key});
-
-  @override
-  State<GradeSettingsScreen> createState() => _GradeSettingsScreenState();
-}
-
-class _GradeSettingsScreenState extends State<GradeSettingsScreen> {
-  final Map<String, double> _gradeThresholds = {
-    '5': 0.85,
-    '4': 0.70,
-    '3': 0.50,
-    '2': 0.0,
-  };
 
   @override
   Widget build(BuildContext context) {
@@ -23,47 +14,74 @@ class _GradeSettingsScreenState extends State<GradeSettingsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.save),
-            onPressed: _saveSettings,
+            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Настройки оценок сохранены')),
+            ),
           ),
         ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Пороги оценок',
-                      style: Theme.of(context).textTheme.titleMedium,
+        child: Consumer<TeacherDashboardController>(
+          builder: (context, controller, child) {
+            final thresholds = controller.gradeThresholds;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Пороги оценок',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Установите минимальный процент для каждой оценки',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Установите минимальный процент для каждой оценки',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ..._gradeThresholds.entries.map((entry) {
-              return _buildGradeThresholdItem(entry.key, entry.value);
-            }),
-            const SizedBox(height: 24),
-            _buildGradeExample(),
-          ],
+                const SizedBox(height: 16),
+                ...thresholds.entries.map(
+                  (entry) => _GradeThresholdItem(
+                    grade: entry.key,
+                    threshold: entry.value,
+                    onChanged: (value) =>
+                        controller.updateGradeThreshold(entry.key, value),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _GradeExample(
+                  calculateGrade: controller.calculateGrade,
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
+}
 
-  Widget _buildGradeThresholdItem(String grade, double threshold) {
+class _GradeThresholdItem extends StatelessWidget {
+  final String grade;
+  final double threshold;
+  final ValueChanged<double> onChanged;
+
+  const _GradeThresholdItem({
+    required this.grade,
+    required this.threshold,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
@@ -101,18 +119,14 @@ class _GradeSettingsScreenState extends State<GradeSettingsScreen> {
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 120,
               child: Slider(
                 value: threshold,
                 min: 0.0,
                 max: 1.0,
                 divisions: 100,
                 label: '${(threshold * 100).toStringAsFixed(0)}%',
-                onChanged: (value) {
-                  setState(() {
-                    _gradeThresholds[grade] = value;
-                  });
-                },
+                onChanged: onChanged,
               ),
             ),
           ],
@@ -120,8 +134,18 @@ class _GradeSettingsScreenState extends State<GradeSettingsScreen> {
       ),
     );
   }
+}
 
-  Widget _buildGradeExample() {
+class _GradeExample extends StatelessWidget {
+  final String Function(double) calculateGrade;
+
+  const _GradeExample({required this.calculateGrade});
+
+  @override
+  Widget build(BuildContext context) {
+    const percentage = 0.75;
+    final grade = calculateGrade(percentage);
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -146,14 +170,16 @@ class _GradeSettingsScreenState extends State<GradeSettingsScreen> {
                 children: [
                   const Text('75% правильных ответов →'),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
-                      color: _calculateGradeColor(0.75),
+                      color: _getGradeColor(grade),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      _calculateGrade(0.75),
+                      grade,
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -168,34 +194,17 @@ class _GradeSettingsScreenState extends State<GradeSettingsScreen> {
       ),
     );
   }
+}
 
-  Color _getGradeColor(String grade) {
-    switch (grade) {
-      case '5':
-        return Colors.green;
-      case '4':
-        return Colors.blue;
-      case '3':
-        return Colors.orange;
-      default:
-        return Colors.red;
-    }
-  }
-
-  String _calculateGrade(double percentage) {
-    if (percentage >= _gradeThresholds['5']!) return '5';
-    if (percentage >= _gradeThresholds['4']!) return '4';
-    if (percentage >= _gradeThresholds['3']!) return '3';
-    return '2';
-  }
-
-  Color _calculateGradeColor(double percentage) {
-    return _getGradeColor(_calculateGrade(percentage));
-  }
-
-  void _saveSettings() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Настройки оценок сохранены')),
-    );
+Color _getGradeColor(String grade) {
+  switch (grade) {
+    case '5':
+      return Colors.green;
+    case '4':
+      return Colors.blue;
+    case '3':
+      return Colors.orange;
+    default:
+      return Colors.red;
   }
 }

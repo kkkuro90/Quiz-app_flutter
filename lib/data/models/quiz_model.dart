@@ -7,6 +7,7 @@ class Quiz {
   final int duration; // в минутах
   final DateTime? scheduledAt;
   final bool isActive;
+  final String? ownerId;
 
   Quiz({
     required this.id,
@@ -17,6 +18,7 @@ class Quiz {
     this.duration = 30,
     this.scheduledAt,
     this.isActive = false,
+    this.ownerId,
   });
 
   factory Quiz.fromJson(Map<String, dynamic> json) {
@@ -32,7 +34,22 @@ class Quiz {
           ? DateTime.parse(json['scheduledAt'])
           : null,
       isActive: json['isActive'] ?? false,
+      ownerId: json['ownerId'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'subject': subject,
+      'questions': questions.map((q) => q.toJson()).toList(),
+      'duration': duration,
+      'scheduledAt': scheduledAt?.toIso8601String(),
+      'isActive': isActive,
+      'ownerId': ownerId,
+    };
   }
 }
 
@@ -61,6 +78,16 @@ class Question {
       points: json['points'] ?? 1,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'text': text,
+      'type': type.index,
+      'answers': answers.map((a) => a.toJson()).toList(),
+      'points': points,
+    };
+  }
 }
 
 class Answer {
@@ -80,6 +107,14 @@ class Answer {
       text: json['text'],
       isCorrect: json['isCorrect'] ?? false,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'text': text,
+      'isCorrect': isCorrect,
+    };
   }
 }
 

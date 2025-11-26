@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
-import '../../../data/models/quiz_model.dart';
 import '../../../data/repositories/quiz_repository.dart';
+import '../../../data/models/schedule_item.dart';
+import '../controllers/teacher_dashboard_controller.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -18,8 +19,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     final quizRepo = context.watch<QuizRepository>();
-    final scheduledQuizzes =
-        quizRepo.quizzes.where((q) => q.scheduledAt != null).toList();
+    final dashboard = context.watch<TeacherDashboardController>();
+    final scheduleItems = dashboard.schedule;
 
     return Scaffold(
       appBar: AppBar(
@@ -28,9 +29,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
       body: Column(
         children: [
           _buildCalendarHeader(),
-          _buildCalendarGrid(),
+          _buildCalendarGrid(scheduleItems),
           const SizedBox(height: 16),
-          _buildScheduledQuizzes(scheduledQuizzes),
+          _buildScheduledItems(
+            scheduleItems,
+            quizRepo,
+          ),
         ],
       ),
     );
@@ -72,7 +76,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildCalendarGrid() {
+  Widget _buildCalendarGrid(List<ScheduleItem> scheduleItems) {
     final firstDay = DateTime(_selectedDate.year, _selectedDate.month, 1);
     final lastDay = DateTime(_selectedDate.year, _selectedDate.month + 1, 0);
     final daysInMonth = lastDay.day;
@@ -96,7 +100,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
           final currentDate =
               DateTime(_selectedDate.year, _selectedDate.month, day);
           final isToday = _isSameDay(currentDate, DateTime.now());
-          final hasQuizzes = _hasQuizzesOnDate(currentDate);
+          final hasItems = scheduleItems.any(
+            (item) => _isSameDay(item.date, currentDate),
+          );
 
           return GestureDetector(
             onTap: () {
@@ -126,7 +132,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  if (hasQuizzes) ...[
+                  if (hasItems) ...[
                     const SizedBox(height: 2),
                     Container(
                       width: 6,
@@ -146,10 +152,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildScheduledQuizzes(List<Quiz> scheduledQuizzes) {
-    final quizzesOnSelectedDate = scheduledQuizzes.where((q) {
-      return q.scheduledAt != null && _isSameDay(q.scheduledAt!, _selectedDate);
-    }).toList();
+  Widget _buildScheduledItems(
+    List<ScheduleItem> scheduleItems,
+    QuizRepository quizRepo,
+  ) {
+    final itemsForDate = scheduleItems.where(
+      (item) => _isSameDay(item.date, _selectedDate),
+    );
 
     return Expanded(
       child: Padding(
@@ -158,38 +167,35 @@ class _CalendarScreenState extends State<CalendarScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Запланированные квизы на ${DateFormat('dd.MM.yyyy').format(_selectedDate)}',
+              'План на ${DateFormat('dd.MM.yyyy').format(_selectedDate)}',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 16),
-            quizzesOnSelectedDate.isEmpty
+            itemsForDate.isEmpty
                 ? const Expanded(
                     child: Center(
                       child: Text(
-                        'Нет запланированных квизов',
+                        'Нет планов на выбранную дату',
                         style: TextStyle(color: Colors.grey),
                       ),
                     ),
                   )
                 : Expanded(
-                    child: ListView.builder(
-                      itemCount: quizzesOnSelectedDate.length,
-                      itemBuilder: (context, index) {
-                        final quiz = quizzesOnSelectedDate[index];
-                        return Card(
+                    child: ListView(
+                      children: itemsForDate.map(
+                        (item) => Card(
                           margin: const EdgeInsets.only(bottom: 8),
                           child: ListTile(
-                            leading: const Icon(Icons.quiz, color: Colors.blue),
-                            title: Text(quiz.title),
-                            subtitle: Text(
-                              '${quiz.questions.length} вопросов • ${quiz.duration} мин',
+                            leading: Icon(
+                              item.isQuiz ? Icons.quiz : Icons.event_note,
+                              color: item.isQuiz ? Colors.blue : Colors.orange,
                             ),
-                            trailing: Text(
-                              DateFormat('HH:mm').format(quiz.scheduledAt!),
-                            ),
+                            title: Text(item.title),
+                            subtitle: _buildItemSubtitle(item, quizRepo),
+                            trailing: Text(DateFormat('HH:mm').format(item.date)),
                           ),
-                        );
-                      },
+                        ),
+                      ).toList(),
                     ),
                   ),
           ],
@@ -198,15 +204,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
+  Widget _buildItemSubtitle(ScheduleItem item, QuizRepository quizRepo) {
+    if (item.isQuiz) {
+      final quiz =
+          quizRepo.quizzes.firstWhere((quiz) => quiz.id == item.relatedQuizId);
+      return Text(
+        '${quiz.questions.length} вопросов • ${quiz.duration} мин',
+      );
+    }
+
+    return Text(item.description);
+  }
+
   bool _isSameDay(DateTime date1, DateTime date2) {
     return date1.year == date2.year &&
         date1.month == date2.month &&
         date1.day == date2.day;
   }
 
-  bool _hasQuizzesOnDate(DateTime date) {
-    final quizRepo = context.read<QuizRepository>();
-    return quizRepo.quizzes
-        .any((q) => q.scheduledAt != null && _isSameDay(q.scheduledAt!, date));
-  }
 }

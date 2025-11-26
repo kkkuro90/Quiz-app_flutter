@@ -251,7 +251,9 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
         title: Text(answer.text),
         leading: Radio<String>(
           value: answer.id,
+          // ignore: deprecated_member_use
           groupValue: isSelected ? answer.id : null,
+          // ignore: deprecated_member_use
           onChanged: (value) => _selectAnswer(answer.id),
         ),
         onTap: () => _selectAnswer(answer.id),

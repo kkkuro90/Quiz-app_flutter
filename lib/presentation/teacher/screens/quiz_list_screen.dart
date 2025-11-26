@@ -19,6 +19,19 @@ class _QuizListScreenState extends State<QuizListScreen> {
   @override
   Widget build(BuildContext context) {
     final quizRepo = context.watch<QuizRepository>();
+    final now = DateTime.now();
+
+    final filteredQuizzes = quizRepo.quizzes.where((quiz) {
+      switch (_selectedFilter) {
+        case 'active':
+          return quiz.isActive;
+        case 'scheduled':
+          return quiz.scheduledAt != null && quiz.scheduledAt!.isAfter(now);
+        case 'all':
+        default:
+          return true;
+      }
+    }).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -39,7 +52,7 @@ class _QuizListScreenState extends State<QuizListScreen> {
           ),
         ],
       ),
-      body: quizRepo.quizzes.isEmpty
+      body: filteredQuizzes.isEmpty
           ? const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -54,9 +67,9 @@ class _QuizListScreenState extends State<QuizListScreen> {
               ),
             )
           : ListView.builder(
-              itemCount: quizRepo.quizzes.length,
+              itemCount: filteredQuizzes.length,
               itemBuilder: (context, index) {
-                final quiz = quizRepo.quizzes[index];
+                final quiz = filteredQuizzes[index];
                 return QuizCard(quiz: quiz);
               },
             ),

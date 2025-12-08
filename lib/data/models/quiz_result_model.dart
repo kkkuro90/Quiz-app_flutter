@@ -35,6 +35,7 @@ class StudentAnswer {
   final String? textAnswer;
   final bool isCorrect;
   final int points;
+  final Duration? timeSpent; // Время, затраченное на ответ
 
   StudentAnswer({
     required this.questionId,
@@ -42,5 +43,6 @@ class StudentAnswer {
     this.textAnswer,
     required this.isCorrect,
     required this.points,
+    this.timeSpent,
   });
 }

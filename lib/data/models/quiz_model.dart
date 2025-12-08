@@ -8,6 +8,7 @@ class Quiz {
   final DateTime? scheduledAt;
   final bool isActive;
   final String? ownerId;
+  final String? pinCode; // PIN-код для подключения
 
   Quiz({
     required this.id,
@@ -19,6 +20,7 @@ class Quiz {
     this.scheduledAt,
     this.isActive = false,
     this.ownerId,
+    this.pinCode,
   });
 
   factory Quiz.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class Quiz {
           : null,
       isActive: json['isActive'] ?? false,
       ownerId: json['ownerId'],
+      pinCode: json['pinCode'],
     );
   }
 
@@ -49,6 +52,7 @@ class Quiz {
       'scheduledAt': scheduledAt?.toIso8601String(),
       'isActive': isActive,
       'ownerId': ownerId,
+      if (pinCode != null) 'pinCode': pinCode,
     };
   }
 
@@ -62,6 +66,7 @@ class Quiz {
     DateTime? scheduledAt,
     bool? isActive,
     String? ownerId,
+    String? pinCode,
   }) {
     return Quiz(
       id: id ?? this.id,
@@ -73,6 +78,7 @@ class Quiz {
       scheduledAt: scheduledAt ?? this.scheduledAt,
       isActive: isActive ?? this.isActive,
       ownerId: ownerId ?? this.ownerId,
+      pinCode: pinCode ?? this.pinCode,
     );
   }
 }
@@ -83,6 +89,7 @@ class Question {
   final QuestionType type;
   final List<Answer> answers;
   final int points;
+  final String? topic; // Тема/раздел для тематической аналитики
 
   Question({
     required this.id,
@@ -90,6 +97,7 @@ class Question {
     required this.type,
     required this.answers,
     this.points = 1,
+    this.topic,
   });
 
   factory Question.fromJson(Map<String, dynamic> json) {
@@ -100,6 +108,7 @@ class Question {
       answers:
           (json['answers'] as List).map((a) => Answer.fromJson(a)).toList(),
       points: json['points'] ?? 1,
+      topic: json['topic'],
     );
   }
 
@@ -110,6 +119,7 @@ class Question {
       'type': type.index,
       'answers': answers.map((a) => a.toJson()).toList(),
       'points': points,
+      if (topic != null) 'topic': topic,
     };
   }
 }

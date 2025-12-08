@@ -18,6 +18,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   final _descriptionController = TextEditingController();
   final _subjectController = TextEditingController();
   final _durationController = TextEditingController(text: '30');
+  final _pinController = TextEditingController();
 
   List<Question> _questions = [];
   bool _isGenerating = false;
@@ -30,6 +31,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       _descriptionController.text = widget.quiz!.description;
       _subjectController.text = widget.quiz!.subject;
       _durationController.text = widget.quiz!.duration.toString();
+      _pinController.text = widget.quiz!.pinCode ?? '';
       _questions = widget.quiz!.questions;
     }
   }
@@ -120,6 +122,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
         subject: _subjectController.text,
         questions: _questions,
         duration: int.parse(_durationController.text),
+        pinCode: _pinController.text.isNotEmpty ? _pinController.text : null,
       );
 
       Navigator.pop(context, quiz);
@@ -197,6 +200,18 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _pinController,
+                      decoration: const InputDecoration(
+                        labelText: 'PIN-код (для подключения учеников)',
+                        hintText: 'Введите 4-значный PIN',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.pin),
+                      ),
+                      keyboardType: TextInputType.number,
+                      maxLength: 4,
                     ),
                     const SizedBox(height: 24),
                     Card(

@@ -28,24 +28,9 @@ class GradeSettingsScreen extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Пороги оценок',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Установите минимальный процент для каждой оценки',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
+                Text(
+                  'Пороги оценок',
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
                 ...thresholds.entries.map(
@@ -55,10 +40,6 @@ class GradeSettingsScreen extends StatelessWidget {
                     onChanged: (value) =>
                         controller.updateGradeThreshold(entry.key, value),
                   ),
-                ),
-                const SizedBox(height: 24),
-                _GradeExample(
-                  calculateGrade: controller.calculateGrade,
                 ),
               ],
             );

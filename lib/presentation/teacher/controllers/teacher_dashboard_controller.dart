@@ -7,6 +7,8 @@ import '../../../data/models/analytics_model.dart';
 import '../../../data/models/app_notification_model.dart';
 import '../../../data/models/financial_model.dart';
 import '../../../data/models/progress_model.dart';
+import '../../../data/models/quiz_model.dart';
+import '../../../data/models/quiz_result_model.dart';
 import '../../../data/models/schedule_item.dart';
 import '../../../data/models/study_material_model.dart';
 import '../../../data/repositories/quiz_repository.dart';
@@ -180,38 +182,9 @@ class TeacherDashboardController extends ChangeNotifier {
   }
 
   List<StudyMaterial> _buildMaterials() {
-    return [
-      StudyMaterial(
-        id: 'mat-1',
-        title: 'Презентация "Функции и графики"',
-        type: StudyMaterialType.presentation,
-        subject: 'Математика',
-        format: 'pptx',
-        storagePath: '/storage/teacher/maths/functions.pptx',
-        updatedAt: DateTime.now().subtract(const Duration(days: 1)),
-        sizeKb: 2048,
-      ),
-      StudyMaterial(
-        id: 'mat-2',
-        title: 'Лекция по механике',
-        type: StudyMaterialType.lecture,
-        subject: 'Физика',
-        format: 'pdf',
-        storagePath: '/storage/teacher/physics/mechanics.pdf',
-        updatedAt: DateTime.now().subtract(const Duration(days: 3)),
-        sizeKb: 3560,
-      ),
-      StudyMaterial(
-        id: 'mat-3',
-        title: 'Домашнее задание №5',
-        type: StudyMaterialType.homework,
-        subject: 'История',
-        format: 'docx',
-        storagePath: '/storage/teacher/history/homework5.docx',
-        updatedAt: DateTime.now().subtract(const Duration(hours: 20)),
-        sizeKb: 512,
-      ),
-    ];
+    // Материалы теперь динамические - добавляются через addStudyMaterial
+    // или могут быть загружены из базы данных
+    return [];
   }
 
   List<FinancialRecord> _buildFinancialRecords() {
@@ -320,15 +293,127 @@ class TeacherDashboardController extends ChangeNotifier {
       }
     }
 
+    // Аналитика по вопросам
+    final questionAnalytics = _buildQuestionAnalytics(results, quizzesById);
+    
+    // Тематическая аналитика
+    final topicPerformance = _buildTopicAnalytics(results, quizzesById);
+
     return QuizAnalyticsSummary(
       averageScore: averageScore,
       passRate: passRate,
       totalAttempts: results.length,
       subjects: subjectPerformance,
       insights: insights,
+      questionAnalytics: questionAnalytics,
+      topicPerformance: topicPerformance,
       bestSubject: subjectPerformance.isNotEmpty ? subjectPerformance.first : null,
       weakSubject: subjectPerformance.length > 1 ? subjectPerformance.last : null,
     );
+  }
+
+  List<QuestionAnalytics> _buildQuestionAnalytics(
+    List<QuizResult> results,
+    Map<String, Quiz> quizzesById,
+  ) {
+    final questionStats = <String, _QuestionStats>{};
+
+    for (final result in results) {
+      final quiz = quizzesById[result.quizId];
+      if (quiz == null) continue;
+
+      for (final answer in result.answers) {
+        final question = quiz.questions.where((q) => q.id == answer.questionId).firstOrNull;
+        if (question == null) continue;
+
+        final stats = questionStats.putIfAbsent(
+          answer.questionId,
+          () => _QuestionStats(
+            questionId: answer.questionId,
+            questionText: question.text,
+          ),
+        );
+
+        stats.totalAttempts++;
+        if (answer.isCorrect) {
+          stats.correctAttempts++;
+        }
+
+        // Время, затраченное на ответ
+        if (answer.timeSpent != null) {
+          stats.totalTimeSeconds += answer.timeSpent!.inSeconds;
+          stats.timeCount++;
+        }
+
+        // Распределение выбранных вариантов
+        for (final selectedId in answer.selectedAnswers) {
+          stats.answerDistribution[selectedId] =
+              (stats.answerDistribution[selectedId] ?? 0) + 1;
+        }
+      }
+    }
+
+    return questionStats.values.map((stats) {
+      final correctPercentage = stats.totalAttempts > 0
+          ? stats.correctAttempts / stats.totalAttempts
+          : 0.0;
+      final averageTime = stats.timeCount > 0
+          ? stats.totalTimeSeconds / stats.timeCount
+          : 0.0;
+      final isDifficult = correctPercentage < 0.5; // Менее 50% правильных ответов
+
+      return QuestionAnalytics(
+        questionId: stats.questionId,
+        questionText: stats.questionText,
+        correctPercentage: correctPercentage,
+        averageTimeSeconds: averageTime,
+        answerDistribution: stats.answerDistribution,
+        isDifficult: isDifficult,
+      );
+    }).toList()
+      ..sort((a, b) => a.correctPercentage.compareTo(b.correctPercentage));
+  }
+
+  List<TopicPerformance> _buildTopicAnalytics(
+    List<QuizResult> results,
+    Map<String, Quiz> quizzesById,
+  ) {
+    final topicStats = <String, _TopicStats>{};
+
+    for (final result in results) {
+      final quiz = quizzesById[result.quizId];
+      if (quiz == null) continue;
+
+      for (final answer in result.answers) {
+        final question = quiz.questions.where((q) => q.id == answer.questionId).firstOrNull;
+        if (question == null) continue;
+
+        final topic = question.topic ?? 'Без темы';
+        final stats = topicStats.putIfAbsent(
+          topic,
+          () => _TopicStats(topic: topic),
+        );
+
+        stats.totalQuestions++;
+        if (answer.isCorrect) {
+          stats.correctAnswers++;
+        }
+      }
+    }
+
+    return topicStats.values.map((stats) {
+      final averageScore = stats.totalQuestions > 0
+          ? stats.correctAnswers / stats.totalQuestions
+          : 0.0;
+
+      return TopicPerformance(
+        topic: stats.topic,
+        averageScore: averageScore,
+        totalQuestions: stats.totalQuestions,
+        correctAnswers: stats.correctAnswers,
+      );
+    }).toList()
+      ..sort((a, b) => b.averageScore.compareTo(a.averageScore));
   }
 
   void _syncNotifications() {
@@ -337,7 +422,7 @@ class TeacherDashboardController extends ChangeNotifier {
         id: 'notify-progress',
         title: 'Обновлена статистика прогресса',
         message:
-            'Средний балл по математике вырос на ${(progressMetrics.firstOrNull?.weeklyDelta ?? 0).abs().toStringAsFixed(2)}%',
+            'Средний балл по математике вырос на ${(_progressMetrics.firstOrNull?.weeklyDelta ?? 0).abs().toStringAsFixed(2)}%',
         createdAt: DateTime.now().subtract(const Duration(hours: 4)),
         type: NotificationType.system,
       ),
@@ -362,5 +447,28 @@ class TeacherDashboardController extends ChangeNotifier {
 
 extension<T> on List<T> {
   T? get firstOrNull => isEmpty ? null : first;
+}
+
+class _QuestionStats {
+  final String questionId;
+  final String questionText;
+  int totalAttempts = 0;
+  int correctAttempts = 0;
+  double totalTimeSeconds = 0;
+  int timeCount = 0;
+  final Map<String, int> answerDistribution = {};
+
+  _QuestionStats({
+    required this.questionId,
+    required this.questionText,
+  });
+}
+
+class _TopicStats {
+  final String topic;
+  int totalQuestions = 0;
+  int correctAnswers = 0;
+
+  _TopicStats({required this.topic});
 }
 

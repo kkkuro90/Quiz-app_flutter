@@ -16,6 +16,7 @@ import 'grade_settings_screen.dart';
 import 'create_quiz_screen.dart';
 import 'quiz_list_screen.dart' show QuizListScreen;
 import 'quiz_analytics_screen.dart';
+import 'analytics_screen.dart';
 
 class TeacherHomeScreen extends StatefulWidget {
   const TeacherHomeScreen({super.key});
@@ -80,7 +81,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const QuizListScreen(),
+                          builder: (context) => const AnalyticsScreen(),
                         ),
                       );
                     },
@@ -100,7 +101,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                   ),
                   const SizedBox(height: 16),
                   ...activeQuizzes.map((quiz) {
-                    final pin = _getQuizPin(quiz);
+                    final pin = quiz.pinCode ?? _getQuizPin(quiz);
                     return QuizCard(
                       title: quiz.title,
                       subtitle: 'PIN: $pin • ${quiz.questions.length} вопросов • ${quiz.duration} мин',
@@ -190,17 +191,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                   builder: (_) => const GradeSettingsScreen(),
                 ),
               );
-            },
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _QuickActionButton(
-            label: 'Режим ученика',
-            icon: Icons.swap_horiz,
-            color: Colors.green,
-            onTap: () {
-              DefaultTabController.of(context).animateTo(1);
             },
           ),
         ),

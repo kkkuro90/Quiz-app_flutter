@@ -31,7 +31,10 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
     // Поиск активного квиза по PIN-коду
     final quizRepo = context.read<QuizRepository>();
     final activeQuiz = quizRepo.quizzes.firstWhere(
-      (quiz) => quiz.isActive && _getQuizPin(quiz) == _pinController.text,
+      (quiz) {
+        final pin = quiz.pinCode ?? _getQuizPin(quiz);
+        return quiz.isActive && pin == _pinController.text;
+      },
       orElse: () => Quiz(
         id: '',
         title: '',

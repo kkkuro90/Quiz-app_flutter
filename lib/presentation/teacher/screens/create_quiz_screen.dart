@@ -66,6 +66,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     }
   }
 
+  /*
   Future<void> _generateQuestionsFromFile() async {
     // Упрощенная версия без file_picker
     setState(() {
@@ -96,7 +97,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       );
     }
   }
-
+    */
   void _addQuestion() {
     showDialog(
       context: context,

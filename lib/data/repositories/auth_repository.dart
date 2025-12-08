@@ -33,18 +33,37 @@ class AuthRepository with ChangeNotifier {
     notifyListeners();
   }
 
-  User _userFromFirebase(fb.User fbUser) {
+  String _extractRole(fb.User fbUser, String fallbackRole) {
+    final displayName = fbUser.displayName ?? '';
+    if (displayName.contains('[teacher]')) return 'teacher';
+    if (displayName.contains('[student]')) return 'student';
+    return fallbackRole;
+  }
+
+  Future<void> _persistRoleToProfile(fb.User fbUser, String role) async {
+    final displayName = fbUser.displayName ?? '';
+    if (displayName.contains('[teacher]') || displayName.contains('[student]')) {
+      return;
+    }
+    await fbUser.updateDisplayName('${fbUser.email ?? fbUser.uid} [$role]');
+  }
+
+  User _userFromFirebase(fb.User fbUser, {String fallbackRole = 'student'}) {
     return User(
       id: fbUser.uid,
       email: fbUser.email ?? '',
       name: fbUser.displayName ?? fbUser.email ?? 'Пользователь',
-      role: 'teacher', // для демо: можно хранить в Firestore профиле
+      role: _extractRole(fbUser, fallbackRole),
       createdAt: fbUser.metadata.creationTime,
       updatedAt: fbUser.metadata.lastSignInTime,
     );
   }
 
-  Future<void> login(String email, String password) async {
+  Future<void> login(
+    String email,
+    String password, {
+    String role = 'student',
+  }) async {
     _isLoading = true;
     notifyListeners();
 
@@ -53,8 +72,9 @@ class AuthRepository with ChangeNotifier {
         email: email,
         password: password,
       );
-      _currentUser = _userFromFirebase(credential.user!);
+      _currentUser = _userFromFirebase(credential.user!, fallbackRole: role);
       _isAuthenticated = true;
+      await _persistRoleToProfile(credential.user!, _currentUser!.role);
     } on fb.FirebaseAuthException {
       _isAuthenticated = false;
       _currentUser = null;
@@ -65,7 +85,11 @@ class AuthRepository with ChangeNotifier {
     }
   }
 
-  Future<void> register(String email, String password) async {
+  Future<void> register(
+    String email,
+    String password, {
+    String role = 'student',
+  }) async {
     _isLoading = true;
     notifyListeners();
 
@@ -74,7 +98,8 @@ class AuthRepository with ChangeNotifier {
         email: email,
         password: password,
       );
-      _currentUser = _userFromFirebase(credential.user!);
+      await credential.user?.updateDisplayName('${email} [$role]');
+      _currentUser = _userFromFirebase(credential.user!, fallbackRole: role);
       _isAuthenticated = true;
     } on fb.FirebaseAuthException {
       _isAuthenticated = false;

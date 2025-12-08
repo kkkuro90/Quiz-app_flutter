@@ -51,6 +51,30 @@ class Quiz {
       'ownerId': ownerId,
     };
   }
+
+  Quiz copyWith({
+    String? id,
+    String? title,
+    String? description,
+    String? subject,
+    List<Question>? questions,
+    int? duration,
+    DateTime? scheduledAt,
+    bool? isActive,
+    String? ownerId,
+  }) {
+    return Quiz(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      subject: subject ?? this.subject,
+      questions: questions ?? this.questions,
+      duration: duration ?? this.duration,
+      scheduledAt: scheduledAt ?? this.scheduledAt,
+      isActive: isActive ?? this.isActive,
+      ownerId: ownerId ?? this.ownerId,
+    );
+  }
 }
 
 class Question {

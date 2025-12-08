@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz - Образовательная платформа</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .app-container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .nav {
+            display: flex;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            background: none;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .nav-btn.active {
+            background: white;
+            color: #4f46e5;
+            border-bottom: 3px solid #4f46e5;
+        }
+
+        .screen {
+            display: none;
+            padding: 20px;
+            min-height: 500px;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .quiz-card {
+            border-left: 4px solid #4f46e5;
+        }
+
+        .input-group {
+            margin: 15px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .question {
+            margin: 20px 0;
+        }
+
+        .options {
+            margin: 15px 0;
+        }
+
+        .option {
+            display: block;
+            padding: 12px;
+            margin: 8px 0;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option:hover {
+            border-color: #4f46e5;
+        }
+
+        .option.selected {
+            background: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+
+        .timer {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #ef4444;
+            margin: 10px 0;
+        }
+
+        .stats {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e2e8f0;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            transition: width 0.3s;
+        }
+
+        .icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .flex {
+            display: flex;
+            gap: 10px;
+        }
+
+        .flex-1 {
+            flex: 1;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-sm {
+            font-size: 14px;
+        }
+
+        .text-gray {
+            color: #6b7280;
+        }
+
+        .mt-4 {
+            margin-top: 20px;
+        }
+
+        .mb-4 {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <h1>📚 Quiz</h1>
+            <p>Интерактивные квизы для образования</p>
+        </div>
+
+        <div class="nav">
+            <button class="nav-btn active" onclick="showScreen('teacher-dashboard')">Учитель</button>
+            <button class="nav-btn" onclick="showScreen('student-dashboard')">Ученик</button>
+            <button class="nav-btn" onclick="showScreen('analytics')">Аналитика</button>
+        </div>
+
+        <!-- Экран учителя -->
+        <div id="teacher-dashboard" class="screen active">
+            <h2 class="text-center">Панель учителя</h2>
+            
+            <button class="btn" onclick="showScreen('create-quiz')">
+                📝 Создать новый квиз
+            </button>
+            
+            <button class="btn btn-secondary" onclick="showScreen('analytics')">
+                📊 Аналитика успеваемости
+            </button>
+
+            <div class="mt-4">
+                <h3>Активные квизы</h3>
+                
+                <div class="card quiz-card">
+                    <h4>Математика 7А класс</h4>
+                    <p class="text-sm text-gray">PIN: <strong>4582</strong> 👥 24/28 🕐 05:30</p>
+                    <div class="flex">
+                        <button class="btn btn-secondary flex-1">Остановить</button>
+                        <button class="btn flex-1" onclick="showScreen('stats-detail')">Статистика</button>
+                    </div>
+                </div>
+
+                <div class="card quiz-card">
+                    <h4>История 10Б класс</h4>
+                    <p class="text-sm text-gray">PIN: <strong>8917</strong> 👥 18/20 🕐 12:45</p>
+                    <div class="flex">
+                        <button class="btn btn-secondary flex-1">Остановить</button>
+                        <button class="btn flex-1" onclick="showScreen('stats-detail')">Статистика</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Создание квиза -->
+        <div id="create-quiz" class="screen">
+            <h2 class="text-center">Создание квиза</h2>
+            
+            <button class="btn" onclick="showScreen('manual-create')">
+                ✏️ Ручное создание
+            </button>
+            
+            <button class="btn" onclick="showScreen('file-upload')">
+                📁 Загрузить из файла
+            </button>
+            
+            <button class="btn" onclick="showScreen('ai-generate')">
+                🤖 AI-генерация
+            </button>
+            
+            <button class="btn btn-secondary" onclick="showScreen('teacher-dashboard')">
+                ← Назад
+            </button>
+        </div>
+
+        <!-- Ручное создание -->
+        <div id="manual-create" class="screen">
+            <h2 class="text-center">Ручное создание</h2>
+            
+            <div class="input-group">
+                <label>Название квиза</label>
+                <input type="text" placeholder="Введите название">
+            </div>
+            
+            <div class="input-group">
+                <label>Предмет</label>
+                <select>
+                    <option>Математика</option>
+                    <option>История</option>
+                    <option>Физика</option>
+                    <option>Химия</option>
+                </select>
+            </div>
+            
+            <button class="btn">Добавить вопрос</button>
+            <button class="btn btn-secondary" onclick="showScreen('create-quiz')">← Назад</button>
+        </div>
+
+        <!-- Загрузка файла -->
+        <div id="file-upload" class="screen">
+            <h2 class="text-center">Загрузка из файла</h2>
+            
+            <div class="card text-center">
+                <div class="icon">📄</div>
+                <h3>Перетащите файл сюда</h3>
+                <p class="text-sm text-gray">Поддерживаемые форматы: PDF, DOCX, TXT, GIFT</p>
+                <button class="btn btn-secondary mt-4">Выбрать файл</button>
+            </div>
+            
+            <button class="btn" onclick="showScreen('ai-processing')">Продолжить</button>
+            <button class="btn btn-secondary" onclick="showScreen('create-quiz')">← Назад</button>
+        </div>
+
+        <!-- AI обработка -->
+        <div id="ai-processing" class="screen">
+            <h2 class="text-center">AI-генерация вопросов</h2>
+            
+            <div class="card text-center">
+                <div class="icon">🤖</div>
+                <h3>Идет обработка файла...</h3>
+                <p class="text-sm text-gray">AI анализирует материал и создает вопросы</p>
+                
+                <div class="progress-bar">
+                    <div class="progress" style="width: 65%"></div>
+                </div>
+                <p>65% завершено</p>
+            </div>
+            
+            <button class="btn" onclick="showScreen('preview-questions')">Предпросмотр вопросов</button>
+            <button class="btn btn-secondary" onclick="showScreen('file-upload')">← Назад</button>
+        </div>
+
+        <!-- Предпросмотр -->
+        <div id="preview-questions" class="screen">
+            <h2 class="text-center">Предпросмотр вопросов</h2>
+            
+            <div class="question">
+                <h4>Вопрос 1: Решите уравнение 2x + 5 = 15</h4>
+                <div class="options">
+                    <div class="option">x = 3</div>
+                    <div class="option selected">x = 5</div>
+                    <div class="option">x = 7</div>
+                    <div class="option">x = 10</div>
+                </div>
+            </div>
+            
+            <button class="btn">Сохранить квиз</button>
+            <button class="btn btn-secondary" onclick="showScreen('ai-processing')">← Назад</button>
+        </div>
+
+        <!-- Экран ученика -->
+        <div id="student-dashboard" class="screen">
+            <h2 class="text-center">Панель ученика</h2>
+            
+            <button class="btn" onclick="showScreen('join-quiz')">
+                🎯 Присоединиться к квизу
+            </button>
+            
+            <button class="btn btn-secondary" onclick="showScreen('self-study')">
+                📚 Самостоятельное обучение
+            </button>
+
+            <div class="mt-4">
+                <h3>Рекомендуемые тесты</h3>
+                
+                <div class="card quiz-card">
+                    <h4>Математика: Алгебра 7 класс</h4>
+                    <p class="text-sm text-gray">25 вопросов • 87% завершено</p>
+                    <div class="progress-bar">
+                        <div class="progress" style="width: 87%"></div>
+                    </div>
+                </div>
+
+                <div class="card quiz-card">
+                    <h4>История: Древний Рим</h4>
+                    <p class="text-sm text-gray">20 вопросов • 45% завершено</p>
+                    <div class="progress-bar">
+                        <div class="progress" style="width: 45%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Присоединение к квизу -->
+        <div id="join-quiz" class="screen">
+            <h2 class="text-center">Присоединение к квизу</h2>
+            
+            <div class="input-group">
+                <label>Введите PIN-код</label>
+                <input type="number" placeholder="0000" id="pin-code">
+            </div>
+            
+            <button class="btn" onclick="joinQuizSession()">Присоединиться</button>
+            <button class="btn btn-secondary" onclick="showScreen('student-dashboard')">← Назад</button>
+        </div>
+
+        <!-- Участие в квизе -->
+        <div id="quiz-session" class="screen">
+            <div class="timer" id="quiz-timer">30</div>
+            
+            <div class="question">
+                <h4>Вопрос 5/10</h4>
+                <p>Решите уравнение: 2x + 5 = 15</p>
+                
+                <div class="options">
+                    <div class="option" onclick="selectOption(this)">x = 3</div>
+                    <div class="option" onclick="selectOption(this)">x = 5</div>
+                    <div class="option" onclick="selectOption(this)">x = 7</div>
+                    <div class="option" onclick="selectOption(this)">x = 10</div>
+                </div>
+            </div>
+            
+            <div class="flex">
+                <button class="btn btn-secondary flex-1" onclick="previousQuestion()">← Назад</button>
+                <button class="btn flex-1" onclick="nextQuestion()">Далее →</button>
+            </div>
+        </div>
+
+        <!-- Аналитика -->
+        <div id="analytics" class="screen">
+            <h2 class="text-center">Аналитика успеваемости</h2>
+            
+            <div class="stats">
+                <h3>Общая успеваемость: 78%</h3>
+                <div class="progress-bar">
+                    <div class="progress" style="width: 78%"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h4>Распределение оценок</h4>
+                <p>5★ ████████████ 12 чел.</p>
+                <p>4★ ████████ 8 чел.</p>
+                <p>3★ ████ 4 чел.</p>
+                <p>2★ █ 1 чел.</p>
+            </div>
+
+            <div class="card">
+                <h4>Самые сложные вопросы</h4>
+                <p>1. Причины падения Римской империи (45% правильных)</p>
+                <p>2. Реформы Диоклетиана (52% правильных)</p>
+            </div>
+            
+            <button class="btn btn-secondary" onclick="showScreen('teacher-dashboard')">← Назад</button>
+        </div>
+
+        <!-- Детальная статистика -->
+        <div id="stats-detail" class="screen">
+            <h2 class="text-center">Статистика квиза</h2>
+            
+            <div class="card">
+                <h4>Математика 7А класс</h4>
+                <p>👥 28 участников • 📅 15.11.2023</p>
+            </div>
+
+            <div class="card">
+                <h4>Результаты по вопросам</h4>
+                <p>Вопрос 1: 92% правильных</p>
+                <p>Вопрос 2: 78% правильных</p>
+                <p>Вопрос 3: 45% правильных</p>
+                <p>Вопрос 4: 85% правильных</p>
+            </div>
+            
+            <button class="btn btn-secondary" onclick="showScreen('teacher-dashboard')">← Назад</button>
+        </div>
+    </div>
+
+    <script>
+        // Функция для переключения экранов
+        function showScreen(screenId) {
+            // Скрыть все экраны
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            
+            // Показать выбранный экран
+            document.getElementById(screenId).classList.add('active');
+            
+            // Обновить активную кнопку навигации
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Установить активную кнопку на основе экрана
+            if (screenId === 'teacher-dashboard' || screenId.startsWith('create-') || screenId.startsWith('manual-') || 
+                screenId.startsWith('file-') || screenId.startsWith('ai-') || screenId.startsWith('preview-')) {
+                document.querySelector('.nav-btn:nth-child(1)').classList.add('active');
+            } else if (screenId === 'student-dashboard' || screenId === 'join-quiz' || screenId === 'quiz-session' || screenId === 'self-study') {
+                document.querySelector('.nav-btn:nth-child(2)').classList.add('active');
+            } else if (screenId === 'analytics' || screenId === 'stats-detail') {
+                document.querySelector('.nav-btn:nth-child(3)').classList.add('active');
+            }
+        }
+
+        // Функция для выбора варианта ответа
+        function selectOption(element) {
+            // Снять выделение со всех вариантов
+            element.parentElement.querySelectorAll('.option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            // Выделить выбранный вариант
+            element.classList.add('selected');
+        }
+
+        // Функция для присоединения к квизу
+        function joinQuizSession() {
+            const pinCode = document.getElementById('pin-code').value;
+            if (pinCode && pinCode.length === 4) {
+                // Здесь будет логика проверки PIN-кода
+                showScreen('quiz-session');
+                startTimer();
+            } else {
+                alert('Введите корректный 4-значный PIN-код');
+            }
+        }
+
+        // Таймер для квиза
+        function startTimer() {
+            let timeLeft = 30;
+            const timerElement = document.getElementById('quiz-timer');
+            
+            const timer = setInterval(() => {
+                timeLeft--;
+                timerElement.textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    alert('Время вышло!');
+                    showScreen('student-dashboard');
+                }
+            }, 1000);
+        }
+
+        // Навигация по вопросам
+        function nextQuestion() {
+            // Здесь будет логика перехода к следующему вопросу
+            alert('Переход к следующему вопросу');
+        }
+
+        function previousQuestion() {
+            // Здесь будет логика перехода к предыдущему вопросу
+            alert('Переход к предыдущему вопросу');
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            showScreen('teacher-dashboard');
+        });
+    </script>
+</body>
+</html>

@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/colors.dart';
 import '../../../data/models/app_notification_model.dart';
 import '../../../data/models/analytics_model.dart';
 import '../../../data/models/progress_model.dart';
 import '../../../data/models/schedule_item.dart';
 import '../../../data/models/study_material_model.dart';
+import '../../../data/models/quiz_model.dart';
+import '../../../data/repositories/quiz_repository.dart';
 import '../controllers/teacher_dashboard_controller.dart';
+import '../../shared/widgets/quiz_card.dart';
 import 'calendar_screen.dart';
 import 'grade_settings_screen.dart';
+import 'create_quiz_screen.dart';
+import 'quiz_list_screen.dart' show QuizListScreen;
+import 'quiz_analytics_screen.dart';
 
 class TeacherHomeScreen extends StatefulWidget {
   const TeacherHomeScreen({super.key});
@@ -30,29 +37,110 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
         final grade = controller.calculateGrade(gradePercentage);
         final analytics = controller.analyticsSummary;
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Панель учителя'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: controller.refresh,
-                tooltip: 'Обновить данные',
-              ),
-            ],
-          ),
-          body: RefreshIndicator(
+        final quizRepo = context.watch<QuizRepository>();
+        final activeQuizzes = quizRepo.quizzes.where((q) => q.isActive).toList();
+
+        return Container(
+          color: AppColors.background,
+          child: RefreshIndicator(
             onRefresh: () async => controller.refresh(),
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               children: [
+                const SizedBox(height: 20),
+                // Кнопка создания квиза
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CreateQuizScreen(),
+                        ),
+                      ).then((newQuiz) {
+                        if (newQuiz != null && context.mounted) {
+                          quizRepo.createQuiz(newQuiz);
+                        }
+                      });
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('📝 Создать новый квиз'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Кнопка аналитики
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const QuizListScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.analytics),
+                    label: const Text('📊 Аналитика успеваемости'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+                // Активные квизы
+                if (activeQuizzes.isNotEmpty) ...[
+                  const SizedBox(height: 32),
+                  Text(
+                    'Активные квизы',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  ...activeQuizzes.map((quiz) {
+                    final pin = _getQuizPin(quiz);
+                    return QuizCard(
+                      title: quiz.title,
+                      subtitle: 'PIN: $pin • ${quiz.questions.length} вопросов • ${quiz.duration} мин',
+                      borderColor: AppColors.primary,
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          OutlinedButton(
+                            onPressed: () {
+                              // Остановить квиз
+                              quizRepo.updateQuiz(quiz.copyWith(isActive: false));
+                            },
+                            child: const Text('Остановить'),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => QuizAnalyticsScreen(quiz: quiz),
+                                ),
+                              );
+                            },
+                            child: const Text('Статистика'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+                const SizedBox(height: 32),
                 _buildQuickActions(context),
-                const SizedBox(height: 16),
-                _buildFinancialModule(controller),
                 const SizedBox(height: 16),
                 _buildGradeConversionCard(controller, grade, gradePercentage),
                 const SizedBox(height: 16),
-                _buildScheduleCard(controller.upcomingQuizzes),
+                _buildScheduleCard(
+                  controller.upcomingQuizzes,
+                  controller,
+                ),
                 const SizedBox(height: 16),
                 _buildProgressCard(controller.progressMetrics),
                 const SizedBox(height: 16),
@@ -117,82 +205,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildFinancialModule(TeacherDashboardController controller) {
-    final metrics = controller.financialMetrics;
-
-    Widget buildStat(String label, double value, {Color? color}) {
-      return Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${value.toStringAsFixed(0)} ₽',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(color: color),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Финансовый модуль',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                buildStat('Доходы', metrics.totalIncome, color: Colors.green),
-                buildStat('Расходы', metrics.totalExpenses, color: Colors.red),
-                buildStat('Чистая прибыль', metrics.netProfit),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(
-                  metrics.trendPercentage >= 0
-                      ? Icons.trending_up
-                      : Icons.trending_down,
-                  color: metrics.trendPercentage >= 0
-                      ? Colors.green
-                      : Colors.red,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '${metrics.trendPercentage >= 0 ? '+' : ''}${metrics.trendPercentage.toStringAsFixed(1)}% к прошлому периоду',
-                  style: TextStyle(
-                    color: metrics.trendPercentage >= 0
-                        ? Colors.green
-                        : Colors.red,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  'Прогноз: ${metrics.monthlyProjection.toStringAsFixed(0)} ₽/мес',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -282,16 +294,29 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
     );
   }
 
-  Widget _buildScheduleCard(List<ScheduleItem> schedule) {
+  Widget _buildScheduleCard(
+    List<ScheduleItem> schedule,
+    TeacherDashboardController controller,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Ближайшие события',
-              style: Theme.of(context).textTheme.titleMedium,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Ближайшие события',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                TextButton.icon(
+                  onPressed: () => _showAddScheduleDialog(context, controller),
+                  icon: const Icon(Icons.edit_calendar),
+                  label: const Text('Редактировать'),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             if (schedule.isEmpty)
@@ -322,6 +347,145 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _showAddScheduleDialog(
+    BuildContext context,
+    TeacherDashboardController controller,
+  ) async {
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
+    ScheduleItemType selectedType = ScheduleItemType.task;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+            left: 16,
+            right: 16,
+            top: 16,
+          ),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Новое событие',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Название',
+                    ),
+                  ),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Описание',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      DropdownButton<ScheduleItemType>(
+                        value: selectedType,
+                        items: const [
+                          DropdownMenuItem(
+                            value: ScheduleItemType.task,
+                            child: Text('Задача'),
+                          ),
+                          DropdownMenuItem(
+                            value: ScheduleItemType.quiz,
+                            child: Text('Квиз'),
+                          ),
+                          DropdownMenuItem(
+                            value: ScheduleItemType.material,
+                            child: Text('Материал'),
+                          ),
+                          DropdownMenuItem(
+                            value: ScheduleItemType.reminder,
+                            child: Text('Напоминание'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() => selectedType = value);
+                          }
+                        },
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(
+                              const Duration(days: 365),
+                            ),
+                          );
+                          if (picked != null) {
+                            final time = await showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay.fromDateTime(selectedDate),
+                            );
+                            setState(() {
+                              selectedDate = DateTime(
+                                picked.year,
+                                picked.month,
+                                picked.day,
+                                time?.hour ?? selectedDate.hour,
+                                time?.minute ?? selectedDate.minute,
+                              );
+                            });
+                          }
+                        },
+                        child: Text(
+                          'Дата: ${_formatDate(selectedDate)} • ${_formatTime(selectedDate)}',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (titleController.text.isEmpty) {
+                          Navigator.pop(ctx);
+                          return;
+                        }
+                        controller.addScheduleItem(
+                          ScheduleItem(
+                            id: 'custom-${DateTime.now().millisecondsSinceEpoch}',
+                            title: titleController.text,
+                            description: descriptionController.text.isEmpty
+                                ? 'Без описания'
+                                : descriptionController.text,
+                            date: selectedDate,
+                            duration: const Duration(minutes: 60),
+                            type: selectedType,
+                          ),
+                        );
+                        Navigator.pop(ctx);
+                      },
+                      child: const Text('Сохранить'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -595,6 +759,11 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
       case ScheduleItemType.material:
         return Colors.green;
     }
+  }
+
+  String _getQuizPin(Quiz quiz) {
+    // Генерация PIN на основе ID квиза (для демо)
+    return (quiz.id.hashCode % 10000).toString().padLeft(4, '0');
   }
 }
 

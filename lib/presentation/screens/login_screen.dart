@@ -14,6 +14,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLogin = true;
+  String _selectedRole = 'student';
 
   void _submit() async {
     if (_formKey.currentState!.validate()) {
@@ -24,11 +25,13 @@ class _LoginScreenState extends State<LoginScreen> {
           await authRepo.login(
             _emailController.text,
             _passwordController.text,
+            role: _selectedRole,
           );
         } else {
           await authRepo.register(
             _emailController.text,
             _passwordController.text,
+            role: _selectedRole,
           );
         }
       } catch (e) {
@@ -85,6 +88,26 @@ class _LoginScreenState extends State<LoginScreen> {
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Text('Роль:'),
+                  const SizedBox(width: 12),
+                  ChoiceChip(
+                    label: const Text('Ученик'),
+                    selected: _selectedRole == 'student',
+                    onSelected: (_) =>
+                        setState(() => _selectedRole = 'student'),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('Учитель'),
+                    selected: _selectedRole == 'teacher',
+                    onSelected: (_) =>
+                        setState(() => _selectedRole = 'teacher'),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
               ElevatedButton(

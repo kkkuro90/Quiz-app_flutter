@@ -68,6 +68,18 @@ class AuthRepository with ChangeNotifier {
     notifyListeners();
 
     try {
+      // Проверка тестовых пользователей (для демо без базы данных)
+      final testUser = _checkTestUser(email, password);
+      if (testUser != null) {
+        await Future.delayed(const Duration(milliseconds: 500)); // Имитация задержки
+        _currentUser = testUser;
+        _isAuthenticated = true;
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      // Обычный вход через Firebase
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -85,6 +97,34 @@ class AuthRepository with ChangeNotifier {
     }
   }
 
+  User? _checkTestUser(String email, String password) {
+    // Тестовый учитель
+    if (email.toLowerCase() == 'teacher' && password == '123qwe') {
+      return User(
+        id: 'test-teacher-001',
+        email: 'teacher@test.com',
+        name: 'Teacher',
+        role: 'teacher',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+    }
+    
+    // Тестовый ученик
+    if (email.toLowerCase() == 'child' && password == '123456') {
+      return User(
+        id: 'test-student-001',
+        email: 'child@test.com',
+        name: 'Child',
+        role: 'student',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+    }
+    
+    return null;
+  }
+
   Future<void> register(
     String email,
     String password, {
@@ -94,6 +134,18 @@ class AuthRepository with ChangeNotifier {
     notifyListeners();
 
     try {
+      // Проверка тестовых пользователей (для демо без базы данных)
+      final testUser = _checkTestUser(email, password);
+      if (testUser != null) {
+        await Future.delayed(const Duration(milliseconds: 500)); // Имитация задержки
+        _currentUser = testUser;
+        _isAuthenticated = true;
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      // Обычная регистрация через Firebase
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,

@@ -15,6 +15,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLogin = true;
+  String _selectedRole = 'student'; // Роль по умолчанию
 
   void _submit() async {
     if (_formKey.currentState!.validate()) {
@@ -30,6 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
           await authRepo.register(
             _emailController.text,
             _passwordController.text,
+            role: _selectedRole,
           );
         }
       } catch (e) {
@@ -123,6 +125,33 @@ class _LoginScreenState extends State<LoginScreen> {
                             return null;
                           },
                         ),
+                        if (!_isLogin) ...[
+                          const SizedBox(height: 16),
+                          DropdownButtonFormField<String>(
+                            value: _selectedRole,
+                            decoration: const InputDecoration(
+                              labelText: 'Роль',
+                              prefixIcon: Icon(Icons.person),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'student',
+                                child: Text('Ученик'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'teacher',
+                                child: Text('Учитель'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() {
+                                  _selectedRole = value;
+                                });
+                              }
+                            },
+                          ),
+                        ],
                         const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,

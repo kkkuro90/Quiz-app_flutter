@@ -43,3 +43,19 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/gradle.properties
+
+# Firebase Data Connect (not used in this project)
+dataconnect/
+dataconnect_generated/
+
+# Firebase
+.firebase/
+.firebase-adminsdk-*.json
+.firebaserc
+firebase-debug.log
+firebase-debug.*.log
+
+# Firebase emulators
+.emulators/
+/functions/node_modules

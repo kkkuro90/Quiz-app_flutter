@@ -117,66 +117,6 @@ class _GradeThresholdItem extends StatelessWidget {
   }
 }
 
-class _GradeExample extends StatelessWidget {
-  final String Function(double) calculateGrade;
-
-  const _GradeExample({required this.calculateGrade});
-
-  @override
-  Widget build(BuildContext context) {
-    const percentage = 0.75;
-    final grade = calculateGrade(percentage);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Пример расчета',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 16),
-            const Text('Студент набрал 75% правильных ответов:'),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('75% правильных ответов →'),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getGradeColor(grade),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      grade,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 Color _getGradeColor(String grade) {
   switch (grade) {
     case '5':

@@ -13,7 +13,7 @@ class NotificationService {
       ..addAll(notifications);
   }
 
-  void publishQuizAnnouncement(Quiz quiz) {
+  void publishQuizAnnouncement(Quiz quiz, String userId) {
     final message =
         'Новый тест "${quiz.title}" назначен на ${quiz.scheduledAt != null ? _formatDate(quiz.scheduledAt!) : 'ближайшее время'}';
     addNotification(
@@ -23,6 +23,7 @@ class NotificationService {
         message: message,
         createdAt: DateTime.now(),
         type: NotificationType.quiz,
+        userId: userId,
       ),
     );
   }

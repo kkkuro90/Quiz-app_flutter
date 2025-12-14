@@ -67,13 +67,6 @@ class AuthRepository with ChangeNotifier {
     return fallbackRole;
   }
 
-  Future<void> _persistRoleToProfile(fb.User fbUser, String role) async {
-    final displayName = fbUser.displayName ?? '';
-    if (displayName.contains('[teacher]') || displayName.contains('[student]')) {
-      return;
-    }
-    await fbUser.updateDisplayName('${fbUser.email ?? fbUser.uid} [$role]');
-  }
 
   User _userFromFirebase(fb.User fbUser, {String fallbackRole = 'student'}) {
     return User(
@@ -190,7 +183,7 @@ class AuthRepository with ChangeNotifier {
       });
       
       // Также сохраняем в displayName для обратной совместимости
-      await fbUser.updateDisplayName('${email} [$role]');
+      await fbUser.updateDisplayName('$email [$role]');
       
       _currentUser = await _loadUserFromFirestore(fbUser);
       _isAuthenticated = true;

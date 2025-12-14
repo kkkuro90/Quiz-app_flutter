@@ -144,7 +144,7 @@ class QuizAnalyticsScreen extends StatelessWidget {
             SizedBox(
               height: 200,
               child: SfCartesianChart(
-                primaryXAxis: CategoryAxis(),
+                primaryXAxis: const CategoryAxis(),
                 series: <ColumnSeries<_ChartData, String>>[
                   ColumnSeries<_ChartData, String>(
                     dataSource: chartData,

@@ -68,8 +68,8 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
   }
 
   String _getQuizPin(Quiz quiz) {
-    // Генерация PIN на основе ID квиза (для демо)
-    return (quiz.id.hashCode % 10000).toString().padLeft(4, '0');
+    // Возвращаем PIN из квиза, если он есть, иначе генерируем на основе ID (резервный вариант)
+    return quiz.pinCode ?? (quiz.id.hashCode % 10000).toString().padLeft(4, '0');
   }
 
   @override
@@ -100,7 +100,7 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withValues(alpha: 0.3),
                       blurRadius: 30,
                       offset: const Offset(0, 10),
                     ),

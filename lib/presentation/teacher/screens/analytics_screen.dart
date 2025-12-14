@@ -328,7 +328,7 @@ class _TopicChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: _getTopicColor(score).withOpacity(0.2),
+        color: _getTopicColor(score).withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: _getTopicColor(score),

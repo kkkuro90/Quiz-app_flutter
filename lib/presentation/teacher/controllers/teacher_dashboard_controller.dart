@@ -12,30 +12,33 @@ import '../../../data/models/quiz_result_model.dart';
 import '../../../data/models/schedule_item.dart';
 import '../../../data/models/study_material_model.dart';
 import '../../../data/repositories/quiz_repository.dart';
+import '../../../data/repositories/grade_settings_repository.dart';
+
+import '../../../data/repositories/auth_repository.dart';
 
 class TeacherDashboardController extends ChangeNotifier {
   TeacherDashboardController({
     required QuizRepository quizRepository,
     required NotificationService notificationService,
+    required GradeSettingsRepository gradeSettingsRepository,
+    required AuthRepository authRepository,
   })  : _quizRepository = quizRepository,
-        _notificationService = notificationService {
+        _notificationService = notificationService,
+        _gradeSettingsRepository = gradeSettingsRepository,
+        _authRepository = authRepository {
     _init();
   }
 
   QuizRepository _quizRepository;
   NotificationService _notificationService;
+  GradeSettingsRepository _gradeSettingsRepository;
+  AuthRepository _authRepository;
 
   List<FinancialRecord> _financialRecords = [];
   List<ScheduleItem> _schedule = [];
   List<StudyMaterial> _materials = [];
   List<ProgressMetric> _progressMetrics = [];
   QuizAnalyticsSummary _analyticsSummary = QuizAnalyticsSummary.empty();
-  final Map<String, double> _gradeThresholds = {
-    '5': 0.85,
-    '4': 0.70,
-    '3': 0.50,
-    '2': 0.0,
-  };
 
   List<AppNotification> get notifications =>
       _notificationService.notifications;
@@ -45,7 +48,7 @@ class TeacherDashboardController extends ChangeNotifier {
       List.unmodifiable(_progressMetrics);
   FinancialMetrics get financialMetrics =>
       FinancialCalculator.calculateMetrics(_financialRecords);
-  Map<String, double> get gradeThresholds => Map.unmodifiable(_gradeThresholds);
+  Map<String, double> get gradeThresholds => _gradeSettingsRepository.currentSettings;
   QuizAnalyticsSummary get analyticsSummary => _analyticsSummary;
 
   List<ScheduleItem> get upcomingQuizzes => _schedule
@@ -57,28 +60,47 @@ class TeacherDashboardController extends ChangeNotifier {
 
   void _init() {
     _quizRepository.addListener(_onRepositoryChanged);
+    _authRepository.addListener(_onAuthChanged);
     _bootstrapData();
   }
 
-  void updateSources(
-    QuizRepository quizRepository,
-    NotificationService notificationService,
-  ) {
-    if (_quizRepository == quizRepository &&
-        _notificationService == notificationService) {
-      return;
+  void _onAuthChanged() {
+    final currentUser = _authRepository.currentUser;
+    if (currentUser != null && currentUser.role == 'teacher') {
+      _gradeSettingsRepository.setCurrentTeacher(currentUser.id);
     }
-    _quizRepository.removeListener(_onRepositoryChanged);
-    _quizRepository = quizRepository;
-    _notificationService = notificationService;
-    _quizRepository.addListener(_onRepositoryChanged);
-    _bootstrapData();
+  }
+
+  void setCurrentTeacher(String teacherId) {
+    _gradeSettingsRepository.setCurrentTeacher(teacherId);
   }
 
   @override
   void dispose() {
     _quizRepository.removeListener(_onRepositoryChanged);
+    _authRepository.removeListener(_onAuthChanged);
     super.dispose();
+  }
+
+  void updateSources(
+    QuizRepository quizRepository,
+    NotificationService notificationService,
+    GradeSettingsRepository gradeSettingsRepository,
+    AuthRepository authRepository,
+  ) {
+    if (_quizRepository == quizRepository &&
+        _notificationService == notificationService &&
+        _gradeSettingsRepository == gradeSettingsRepository &&
+        _authRepository == authRepository) {
+      return;
+    }
+    _quizRepository.removeListener(_onRepositoryChanged);
+    _quizRepository = quizRepository;
+    _notificationService = notificationService;
+    _gradeSettingsRepository = gradeSettingsRepository;
+    _authRepository = authRepository;
+    _quizRepository.addListener(_onRepositoryChanged);
+    _bootstrapData();
   }
 
   void refresh() {
@@ -106,15 +128,13 @@ class TeacherDashboardController extends ChangeNotifier {
   }
 
   void updateGradeThreshold(String grade, double value) {
-    _gradeThresholds[grade] = value.clamp(0.0, 1.0);
-    notifyListeners();
+    final current = Map<String, double>.from(_gradeSettingsRepository.currentSettings);
+    current[grade] = value.clamp(0.0, 1.0);
+    _gradeSettingsRepository.saveSettings(current);
   }
 
   String calculateGrade(double percentage) {
-    if (percentage >= _gradeThresholds['5']!) return '5';
-    if (percentage >= _gradeThresholds['4']!) return '4';
-    if (percentage >= _gradeThresholds['3']!) return '3';
-    return '2';
+    return _gradeSettingsRepository.calculateGrade(percentage);
   }
 
   void _bootstrapData() {
@@ -134,6 +154,7 @@ class TeacherDashboardController extends ChangeNotifier {
   List<ScheduleItem> _buildSchedule() {
     final quizzes = _quizRepository.quizzes;
     final items = <ScheduleItem>[];
+    final currentUserId = _authRepository.currentUser?.id;
 
     for (final quiz in quizzes.where((q) => q.scheduledAt != null)) {
       final scheduledAt = quiz.scheduledAt!;
@@ -146,6 +167,8 @@ class TeacherDashboardController extends ChangeNotifier {
           duration: Duration(minutes: quiz.duration),
           type: ScheduleItemType.quiz,
           relatedQuizId: quiz.id,
+          teacherId: currentUserId,
+          createdAt: scheduledAt,
         ),
       );
       items.add(
@@ -156,26 +179,11 @@ class TeacherDashboardController extends ChangeNotifier {
           date: scheduledAt.subtract(const Duration(days: 1)),
           type: ScheduleItemType.task,
           relatedQuizId: quiz.id,
+          teacherId: currentUserId,
+          createdAt: scheduledAt.subtract(const Duration(days: 1)),
         ),
       );
     }
-
-    items.addAll([
-      ScheduleItem(
-        id: 'task-budget',
-        title: 'Обновить финансовый план',
-        description: 'Сверка бюджета за текущую неделю',
-        date: DateTime.now().add(const Duration(days: 1, hours: 3)),
-        type: ScheduleItemType.task,
-      ),
-      ScheduleItem(
-        id: 'task-mentor',
-        title: 'Лекция: подготовка к Олимпиаде',
-        description: 'Загрузить презентацию и материалы для команды',
-        date: DateTime.now().add(const Duration(days: 3, hours: 2)),
-        type: ScheduleItemType.material,
-      ),
-    ]);
 
     items.sort((a, b) => a.date.compareTo(b.date));
     return items;
@@ -222,13 +230,6 @@ class TeacherDashboardController extends ChangeNotifier {
       subjectScores[quiz.subject]!.add(result.percentage);
     }
 
-    if (subjectScores.isEmpty) {
-      return [
-        const ProgressMetric(subject: 'Математика', completion: 0.6, weeklyDelta: 0.05),
-        const ProgressMetric(subject: 'Физика', completion: 0.55, weeklyDelta: -0.02),
-      ];
-    }
-
     return subjectScores.entries.map((entry) {
       final avg = entry.value.reduce((a, b) => a + b) / entry.value.length;
       final delta = (Random(entry.key.hashCode).nextDouble() * 0.1) - 0.05;
@@ -249,7 +250,7 @@ class TeacherDashboardController extends ChangeNotifier {
     final averageScore =
         results.map((r) => r.percentage).reduce((a, b) => a + b) /
             results.length;
-    final passThreshold = _gradeThresholds['3'] ?? 0.5;
+    final passThreshold = _gradeSettingsRepository.currentSettings['3'] ?? 0.5;
     final passRate = results
             .where((r) => r.percentage >= passThreshold)
             .length /
@@ -417,16 +418,7 @@ class TeacherDashboardController extends ChangeNotifier {
   }
 
   void _syncNotifications() {
-    final notifications = <AppNotification>[
-      AppNotification(
-        id: 'notify-progress',
-        title: 'Обновлена статистика прогресса',
-        message:
-            'Средний балл по математике вырос на ${(_progressMetrics.firstOrNull?.weeklyDelta ?? 0).abs().toStringAsFixed(2)}%',
-        createdAt: DateTime.now().subtract(const Duration(hours: 4)),
-        type: NotificationType.system,
-      ),
-    ];
+    final notifications = <AppNotification>[];
 
     for (final quiz in _quizRepository.quizzes.where((q) => q.scheduledAt != null)) {
       notifications.add(
@@ -443,10 +435,6 @@ class TeacherDashboardController extends ChangeNotifier {
 
     _notificationService.seed(notifications);
   }
-}
-
-extension<T> on List<T> {
-  T? get firstOrNull => isEmpty ? null : first;
 }
 
 class _QuestionStats {

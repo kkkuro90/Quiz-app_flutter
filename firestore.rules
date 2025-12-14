@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Функция проверки авторизации
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Функция проверки, что пользователь - владелец документа
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Функция получения роли пользователя
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    // Коллекция users - пользователи могут читать/писать только свой профиль
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+    
+    // Коллекция quizzes - учителя создают, все читают активные
+    match /quizzes/{quizId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && getUserRole() == 'teacher';
+      allow update: if isAuthenticated() && getUserRole() == 'teacher' && 
+                     resource.data.ownerId == request.auth.uid;
+      allow delete: if isAuthenticated() && getUserRole() == 'teacher' && 
+                     resource.data.ownerId == request.auth.uid;
+    }
+    
+    // Коллекция quiz_results - ученики создают свои результаты, учителя читают все
+    match /quiz_results/{resultId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        getUserRole() == 'teacher'
+      );
+      allow create: if isAuthenticated() && getUserRole() == 'student' &&
+                     request.resource.data.studentId == request.auth.uid;
+      allow update: if false; // Результаты нельзя изменять
+      allow delete: if isAuthenticated() && getUserRole() == 'teacher';
+    }
+    
+    // Коллекция grade_settings - только учителя
+    match /grade_settings/{teacherId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && 
+                             getUserRole() == 'teacher' && 
+                             teacherId == request.auth.uid;
+      allow delete: if isAuthenticated() && getUserRole() == 'teacher' && 
+                     teacherId == request.auth.uid;
+    }
+    
+    // Коллекция schedule - только учителя
+    match /schedule/{scheduleId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated() && 
+                                      getUserRole() == 'teacher' &&
+                                      resource.data.teacherId == request.auth.uid;
+    }
+    
+    // Коллекция study_materials - только учителя
+    match /study_materials/{materialId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated() && 
+                                      getUserRole() == 'teacher' &&
+                                      resource.data.teacherId == request.auth.uid;
+    }
+    
+    // Коллекция notifications - пользователи читают только свои
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && 
+                   resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && 
+                     resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && 
+                     resource.data.userId == request.auth.uid;
+    }
+    
+    // Коллекция fcm_tokens - пользователи управляют только своими токенами
+    match /fcm_tokens/{tokenId} {
+      allow read, write: if isAuthenticated() && 
+                          resource.data.userId == request.auth.uid;
+    }
+  }
+}

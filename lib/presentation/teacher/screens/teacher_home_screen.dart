@@ -14,7 +14,6 @@ import '../../shared/widgets/quiz_card.dart';
 import 'calendar_screen.dart';
 import 'grade_settings_screen.dart';
 import 'create_quiz_screen.dart';
-import 'quiz_list_screen.dart' show QuizListScreen;
 import 'quiz_analytics_screen.dart';
 import 'analytics_screen.dart';
 
@@ -109,13 +108,21 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          OutlinedButton(
-                            onPressed: () {
-                              // Остановить квиз
-                              quizRepo.updateQuiz(quiz.copyWith(isActive: false));
-                            },
-                            child: const Text('Остановить'),
-                          ),
+                          quiz.isActive
+                              ? OutlinedButton(
+                                  onPressed: () {
+                                    // Остановить квиз
+                                    quizRepo.updateQuiz(quiz.copyWith(isActive: false));
+                                  },
+                                  child: const Text('Остановить'),
+                                )
+                              : ElevatedButton(
+                                  onPressed: () {
+                                    // Активировать квиз
+                                    quizRepo.updateQuiz(quiz.copyWith(isActive: true));
+                                  },
+                                  child: const Text('Запустить'),
+                                ),
                           const SizedBox(width: 8),
                           ElevatedButton(
                             onPressed: () {
@@ -422,8 +429,9 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                             ),
                           );
                           if (picked != null) {
+                            final BuildContext dialogContext = context; // Capture context before async gap
                             final time = await showTimePicker(
-                              context: context,
+                              context: dialogContext,
                               initialTime: TimeOfDay.fromDateTime(selectedDate),
                             );
                             setState(() {
@@ -752,8 +760,8 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
   }
 
   String _getQuizPin(Quiz quiz) {
-    // Генерация PIN на основе ID квиза (для демо)
-    return (quiz.id.hashCode % 10000).toString().padLeft(4, '0');
+    // Возвращаем PIN из квиза, если он есть, иначе генерируем на основе ID (резервный вариант)
+    return quiz.pinCode ?? (quiz.id.hashCode % 10000).toString().padLeft(4, '0');
   }
 }
 

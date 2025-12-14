@@ -101,12 +101,12 @@ class StudentHomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               ...availableQuizzes.map((quiz) {
-                final progress = 0.0; // TODO: Получить из локального хранилища
+                const progress = 0.0; // TODO: Получить из локального хранилища
                 return QuizCard(
                   title: quiz.title,
                   subtitle: '${quiz.questions.length} вопросов • ${progress > 0 ? '${(progress * 100).toStringAsFixed(0)}% завершено' : 'Не начат'}',
                   trailing: progress > 0
-                      ? SizedBox(
+                      ? const SizedBox(
                           width: 100,
                           child: LinearProgressIndicator(
                             value: progress,

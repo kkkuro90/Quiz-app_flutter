@@ -5,6 +5,7 @@ import 'core/theme/app_theme.dart';
 import 'presentation/app.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/quiz_repository.dart';
+import 'data/repositories/grade_settings_repository.dart';
 import 'core/services/notification_service.dart';
 import 'presentation/teacher/controllers/teacher_dashboard_controller.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -18,21 +19,26 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthRepository()),
         ChangeNotifierProvider(create: (_) => QuizRepository()),
+        ChangeNotifierProvider(create: (_) => GradeSettingsRepository()),
         Provider(create: (_) => NotificationService()),
-        ChangeNotifierProxyProvider2<QuizRepository, NotificationService,
+        ChangeNotifierProxyProvider4<QuizRepository, NotificationService, GradeSettingsRepository, AuthRepository,
             TeacherDashboardController>(
           create: (context) => TeacherDashboardController(
             quizRepository: context.read<QuizRepository>(),
             notificationService: context.read<NotificationService>(),
+            gradeSettingsRepository: context.read<GradeSettingsRepository>(),
+            authRepository: context.read<AuthRepository>(),
           ),
-          update: (context, quizRepo, notificationService, controller) {
+          update: (context, quizRepo, notificationService, gradeSettingsRepo, authRepo, controller) {
             if (controller == null) {
               return TeacherDashboardController(
                 quizRepository: quizRepo,
                 notificationService: notificationService,
+                gradeSettingsRepository: gradeSettingsRepo,
+                authRepository: authRepo,
               );
             }
-            controller.updateSources(quizRepo, notificationService);
+            controller.updateSources(quizRepo, notificationService, gradeSettingsRepo, authRepo);
             return controller;
           },
         ),

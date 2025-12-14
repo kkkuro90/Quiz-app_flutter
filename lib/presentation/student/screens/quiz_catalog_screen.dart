@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/colors.dart';
 import '../../../data/repositories/quiz_repository.dart';
-import '../../../data/models/quiz_model.dart';
 import '../../shared/widgets/quiz_card.dart';
 import 'quiz_session_screen.dart';
 
@@ -143,7 +142,7 @@ class _QuizCatalogScreenState extends State<QuizCatalogScreen> {
           _selectedSubject = value;
         });
       },
-      selectedColor: AppColors.primary.withOpacity(0.2),
+      selectedColor: AppColors.primary.withValues(alpha: 0.2),
       checkmarkColor: AppColors.primary,
     );
   }

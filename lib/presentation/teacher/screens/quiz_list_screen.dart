@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/quiz_model.dart';
 import '../../../data/repositories/quiz_repository.dart';
+import '../../../core/services/export_service.dart';
 import 'create_quiz_screen.dart';
 import 'quiz_analytics_screen.dart';
 
@@ -297,20 +298,130 @@ class QuizCard extends StatelessWidget {
       initialDate: DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-    ).then((selectedDate) {
+    ).then((selectedDate) async {
       if (selectedDate != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'Квиз запланирован на ${selectedDate.toString().split(' ')[0]}')),
+        // Show time picker after date is selected
+        final time = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay.now(),
         );
+
+        if (time != null && context.mounted) {
+          // Combine date and time
+          final scheduledAt = DateTime(
+            selectedDate.year,
+            selectedDate.month,
+            selectedDate.day,
+            time.hour,
+            time.minute,
+          );
+
+          // Update the quiz in the repository with the scheduled time
+          final updatedQuiz = quiz.copyWith(scheduledAt: scheduledAt);
+          final quizRepo = context.read<QuizRepository>();
+          await quizRepo.updateQuiz(updatedQuiz);
+
+          // Show success message
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Квиз запланирован на ${scheduledAt.day}.${scheduledAt.month}.${scheduledAt.year} в ${scheduledAt.hour.toString().padLeft(2, '0')}:${scheduledAt.minute.toString().padLeft(2, '0')}',
+                ),
+              ),
+            );
+          }
+        }
       }
     });
   }
 
   void _exportQuiz(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Функция экспорта в разработке')),
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Экспорт квиза'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Выберите формат экспорта:'),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.description),
+                title: const Text('GIFT (Moodle)'),
+                subtitle: const Text('Формат для импорта в Moodle'),
+                onTap: () {
+                  final giftContent = ExportService.exportToGiftFormat(quiz);
+                  _showExportContent(context, 'quiz_export.gift', giftContent);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.table_chart),
+                title: const Text('CSV'),
+                subtitle: const Text('Формат таблицы'),
+                onTap: () {
+                  final csvContent = ExportService.exportToCsv(quiz);
+                  _showExportContent(context, 'quiz_export.csv', csvContent);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.data_object),
+                title: const Text('JSON'),
+                subtitle: const Text('Формат данных'),
+                onTap: () {
+                  final jsonContent = ExportService.exportToJson(quiz);
+                  _showExportContent(context, 'quiz_export.json', jsonContent);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showExportContent(BuildContext context, String filename, String content) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Экспортированный файл: $filename'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Text(
+              content,
+              style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Закрыть'),
+          ),
+          TextButton(
+            onPressed: () {
+              // In a real implementation, this would trigger file download
+              // For now, just show a message
+              Navigator.pop(context);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Файл экспортирован (в реальном приложении файл будет скачан)'),
+                  ),
+                );
+              }
+            },
+            child: const Text('Скачать'),
+          ),
+        ],
+      ),
     );
   }
 

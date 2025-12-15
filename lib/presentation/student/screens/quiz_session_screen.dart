@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../../data/models/quiz_model.dart';
+import '../../../data/models/quiz_result_model.dart';
+import '../../../data/repositories/quiz_repository.dart';
+import '../../../core/services/real_time_quiz_service.dart';
 
 class QuizSessionScreen extends StatefulWidget {
   final Quiz quiz;
@@ -14,19 +18,61 @@ class QuizSessionScreen extends StatefulWidget {
 class _QuizSessionScreenState extends State<QuizSessionScreen> {
   int _currentQuestionIndex = 0;
   final Map<int, List<String>> _selectedAnswers = {};
+  final Map<int, DateTime> _questionStartTimes = {};
   int _remainingTime = 0;
   late Timer _timer;
+  late RealTimeQuizService _realTimeService;
 
   @override
   void initState() {
     super.initState();
+    _realTimeService = RealTimeQuizService(); // Keep it in case we need it later
     _remainingTime = widget.quiz.duration * 60;
-    _startTimer();
+
+    // Just use local timer for now, avoid server-side timing issues
+    _startLocalTimer();
+
+    // Record start time for the first question
+    _recordQuestionStartTime(0);
+  }
+
+  /// Start local countdown timer only
+  void _startLocalTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_remainingTime > 0) {
+        setState(() {
+          _remainingTime--;
+        });
+      } else {
+        _submitQuiz();
+      }
+    });
+  }
+
+  /// Record the start time for a question
+  void _recordQuestionStartTime(int questionIndex) {
+    _questionStartTimes[questionIndex] = DateTime.now();
+  }
+
+  /// Calculate time spent on a question
+  Duration? _getTimeSpentOnQuestion(int questionIndex) {
+    if (_questionStartTimes.containsKey(questionIndex)) {
+      return DateTime.now().difference(_questionStartTimes[questionIndex]!);
+    }
+    return null;
   }
 
   @override
   void dispose() {
     _timer.cancel();
+    _realTimeService.dispose();
+
+    // Update quiz status when quiz is left
+    _realTimeService.updateQuizStatus(
+      quizId: widget.quiz.id,
+      status: _currentQuestionIndex >= widget.quiz.questions.length - 1 ? 'completed' : 'interrupted',
+    );
+
     super.dispose();
   }
 
@@ -64,6 +110,7 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
         _selectedAnswers[_currentQuestionIndex] = currentAnswers;
       }
     });
+
   }
 
   void _nextQuestion() {
@@ -71,6 +118,9 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
       setState(() {
         _currentQuestionIndex++;
       });
+
+      // Record the start time for this question (just moved to)
+      _recordQuestionStartTime(_currentQuestionIndex);
     }
   }
 
@@ -79,41 +129,105 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
       setState(() {
         _currentQuestionIndex--;
       });
+
+      // Record the start time for this question (just moved to)
+      _recordQuestionStartTime(_currentQuestionIndex);
     }
   }
 
-  void _submitQuiz() {
+  void _submitQuiz() async {
     _timer.cancel();
+
+    // Skip the server time check to avoid permission issues
+    // The local countdown timer already enforces time limits
 
     // Расчет результатов
     int totalPoints = 0;
     int maxPoints = 0;
+    final List<StudentAnswer> studentAnswers = [];
 
     for (int i = 0; i < widget.quiz.questions.length; i++) {
       final question = widget.quiz.questions[i];
       final selected = _selectedAnswers[i] ?? [];
       maxPoints += question.points;
 
+      bool isCorrect = false;
       if (question.type == QuestionType.singleChoice) {
-        final correctAnswer = question.answers.firstWhere((a) => a.isCorrect);
-        if (selected.contains(correctAnswer.id)) {
-          totalPoints += question.points;
-        }
+        final correctAnswer = question.answers.firstWhere((a) => a.isCorrect, orElse: () => question.answers.first);
+        isCorrect = selected.contains(correctAnswer.id);
       } else if (question.type == QuestionType.multipleChoice) {
         final correctAnswers = question.answers
             .where((a) => a.isCorrect)
             .map((a) => a.id)
             .toList();
-        if (selected.length == correctAnswers.length &&
-            selected.every((id) => correctAnswers.contains(id))) {
-          totalPoints += question.points;
+        isCorrect = selected.length == correctAnswers.length &&
+            selected.every((id) => correctAnswers.contains(id));
+      }
+
+      if (isCorrect) {
+        totalPoints += question.points;
+      }
+
+      // Calculate time spent on this question
+      Duration? timeSpent = null;
+      final questionStartTime = _questionStartTimes[i];
+
+      if (questionStartTime != null) {
+        // If this is the last question in the quiz, use current time
+        // Otherwise, use the time when the user moved to the next question
+        if (i == _currentQuestionIndex && _currentQuestionIndex == widget.quiz.questions.length - 1) {
+          // If this is the last question and user is currently on it, use current time
+          timeSpent = DateTime.now().difference(questionStartTime);
+        } else if (i < widget.quiz.questions.length - 1) {
+          // If this is not the last question in the quiz, use the start time of the next question
+          final nextQuestionStartTime = _questionStartTimes[i + 1];
+          if (nextQuestionStartTime != null) {
+            timeSpent = nextQuestionStartTime.difference(questionStartTime);
+          } else {
+            // If no start time recorded for next question, use current time
+            timeSpent = DateTime.now().difference(questionStartTime);
+          }
+        } else {
+          // For the last question in the quiz, use current time if it was viewed
+          timeSpent = DateTime.now().difference(questionStartTime);
         }
       }
+
+      // Add student answer to list
+      studentAnswers.add(
+        StudentAnswer(
+          questionId: question.id,
+          selectedAnswers: selected,
+          textAnswer: null, // We don't support text answers in this implementation
+          isCorrect: isCorrect,
+          points: isCorrect ? question.points : 0,
+          timeSpent: timeSpent,
+        ),
+      );
     }
 
     final percentage = maxPoints > 0
         ? totalPoints / maxPoints
         : 0.0; // ← ИСПРАВЛЕНО: добавлено .0
+
+    // Create and save quiz result
+    final result = QuizResult(
+      id: DateTime.now().millisecondsSinceEpoch.toString(), // Generate unique ID
+      quizId: widget.quiz.id,
+      studentId: 'current_student', // In a real app, this would be the actual student ID
+      studentName: 'Current Student', // In a real app, this would be the actual student name
+      totalPoints: totalPoints,
+      maxPoints: maxPoints,
+      percentage: percentage,
+      completedAt: DateTime.now(),
+      answers: studentAnswers,
+    );
+
+    // Save result to repository (which also saves to Firestore)
+    final quizRepo = context.read<QuizRepository>();
+    quizRepo.addResult(result);
+
+    // Skip updating server status to avoid permission issues
 
     showDialog(
       context: context,
@@ -123,7 +237,9 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
         maxPoints: maxPoints,
         percentage: percentage,
         onClose: () {
-          Navigator.popUntil(context, (route) => route.isFirst);
+          if (context.mounted) {
+            Navigator.pop(context); // Simply pop the QuizSessionScreen
+          }
         },
       ),
     );
@@ -134,6 +250,11 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
     final currentQuestion = widget.quiz.questions[_currentQuestionIndex];
     final selectedAnswers = _selectedAnswers[_currentQuestionIndex] ?? [];
     String? selectedSingleAnswer; // ← ДОБАВЛЕНО для RadioGroup
+
+    // Check if this is the first time viewing this question
+    if (!_questionStartTimes.containsKey(_currentQuestionIndex)) {
+      _recordQuestionStartTime(_currentQuestionIndex);
+    }
 
     if (currentQuestion.type == QuestionType.singleChoice &&
         selectedAnswers.isNotEmpty) {

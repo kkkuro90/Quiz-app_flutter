@@ -295,6 +295,16 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
     List<ScheduleItem> schedule,
     TeacherDashboardController controller,
   ) {
+    // Get all schedule items within the next week, not just quizzes
+    final now = DateTime.now();
+    final nextWeek = now.add(const Duration(days: 7));
+    final upcomingSchedule = controller.schedule
+        .where((item) =>
+            item.date.isAfter(now.subtract(const Duration(days: 1))) &&
+            item.date.isBefore(nextWeek))
+        .toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -316,18 +326,16 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            if (schedule.isEmpty)
+            if (upcomingSchedule.isEmpty)
               const Text('Расписание пустое на ближайшую неделю')
             else
-              ...schedule.take(4).map(
+              ...upcomingSchedule.take(4).map(
                 (item) => ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: CircleAvatar(
                     backgroundColor: _scheduleColor(item.type),
                     child: Icon(
-                      item.type == ScheduleItemType.quiz
-                          ? Icons.quiz
-                          : Icons.event_note,
+                      _getScheduleIcon(item.type),
                       color: Colors.white,
                     ),
                   ),
@@ -743,6 +751,19 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
         return Colors.blue;
       case NotificationType.system:
         return Colors.green;
+    }
+  }
+
+  IconData _getScheduleIcon(ScheduleItemType type) {
+    switch (type) {
+      case ScheduleItemType.quiz:
+        return Icons.quiz;
+      case ScheduleItemType.task:
+        return Icons.task_alt;
+      case ScheduleItemType.reminder:
+        return Icons.notifications_active;
+      case ScheduleItemType.material:
+        return Icons.library_books;
     }
   }
 

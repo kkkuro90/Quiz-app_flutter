@@ -9,6 +9,8 @@ class Quiz {
   final bool isActive;
   final String? ownerId;
   final String? pinCode; // PIN-код для подключения
+  final DateTime? pinExpiresAt; // Срок действия PIN-кода
+  final bool? isQuizActive; // Дополнительное поле для активности квиза в реальном времени
 
   Quiz({
     required this.id,
@@ -21,11 +23,13 @@ class Quiz {
     this.isActive = false,
     this.ownerId,
     this.pinCode,
+    this.pinExpiresAt,
+    this.isQuizActive,
   });
 
-  factory Quiz.fromJson(Map<String, dynamic> json) {
+  factory Quiz.fromJson(Map<String, dynamic> json, [String? documentId]) {
     return Quiz(
-      id: json['id'],
+      id: json['id'] ?? documentId ?? '', // documentId может быть передан от Firestore
       title: json['title'],
       description: json['description'],
       subject: json['subject'],
@@ -38,6 +42,10 @@ class Quiz {
       isActive: json['isActive'] ?? false,
       ownerId: json['ownerId'],
       pinCode: json['pinCode'],
+      pinExpiresAt: json['pinExpiresAt'] != null
+          ? DateTime.parse(json['pinExpiresAt'])
+          : null,
+      isQuizActive: json['isQuizActive'],
     );
   }
 
@@ -53,6 +61,8 @@ class Quiz {
       'isActive': isActive,
       'ownerId': ownerId,
       if (pinCode != null) 'pinCode': pinCode,
+      if (pinExpiresAt != null) 'pinExpiresAt': pinExpiresAt!.toIso8601String(),
+      if (isQuizActive != null) 'isQuizActive': isQuizActive,
     };
   }
 
@@ -67,6 +77,8 @@ class Quiz {
     bool? isActive,
     String? ownerId,
     String? pinCode,
+    DateTime? pinExpiresAt,
+    bool? isQuizActive,
   }) {
     return Quiz(
       id: id ?? this.id,
@@ -79,6 +91,8 @@ class Quiz {
       isActive: isActive ?? this.isActive,
       ownerId: ownerId ?? this.ownerId,
       pinCode: pinCode ?? this.pinCode,
+      pinExpiresAt: pinExpiresAt ?? this.pinExpiresAt,
+      isQuizActive: isQuizActive ?? this.isQuizActive,
     );
   }
 }

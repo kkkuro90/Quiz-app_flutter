@@ -21,9 +21,9 @@ class QuizResult {
     required this.answers,
   });
 
-  factory QuizResult.fromJson(Map<String, dynamic> json) {
+  factory QuizResult.fromJson(Map<String, dynamic> json, [String? documentId]) {
     return QuizResult(
-      id: json['id'] ?? json['documentId'] ?? '', // documentId может быть передан от Firestore
+      id: json['id'] ?? documentId ?? '', // documentId может быть передан от Firestore
       quizId: json['quizId'],
       studentId: json['studentId'],
       studentName: json['studentName'],
@@ -56,6 +56,30 @@ class QuizResult {
     if (percentage >= 0.70) return '4';
     if (percentage >= 0.50) return '3';
     return '2';
+  }
+
+  QuizResult copyWith({
+    String? id,
+    String? quizId,
+    String? studentId,
+    String? studentName,
+    int? totalPoints,
+    int? maxPoints,
+    double? percentage,
+    DateTime? completedAt,
+    List<StudentAnswer>? answers,
+  }) {
+    return QuizResult(
+      id: id ?? this.id,
+      quizId: quizId ?? this.quizId,
+      studentId: studentId ?? this.studentId,
+      studentName: studentName ?? this.studentName,
+      totalPoints: totalPoints ?? this.totalPoints,
+      maxPoints: maxPoints ?? this.maxPoints,
+      percentage: percentage ?? this.percentage,
+      completedAt: completedAt ?? this.completedAt,
+      answers: answers ?? this.answers,
+    );
   }
 }
 
@@ -98,5 +122,23 @@ class StudentAnswer {
       'points': points,
       if (timeSpent != null) 'timeSpentSeconds': timeSpent!.inSeconds,
     };
+  }
+
+  StudentAnswer copyWith({
+    String? questionId,
+    List<String>? selectedAnswers,
+    String? textAnswer,
+    bool? isCorrect,
+    int? points,
+    Duration? timeSpent,
+  }) {
+    return StudentAnswer(
+      questionId: questionId ?? this.questionId,
+      selectedAnswers: selectedAnswers ?? this.selectedAnswers,
+      textAnswer: textAnswer ?? this.textAnswer,
+      isCorrect: isCorrect ?? this.isCorrect,
+      points: points ?? this.points,
+      timeSpent: timeSpent ?? this.timeSpent,
+    );
   }
 }

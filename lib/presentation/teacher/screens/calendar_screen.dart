@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 import '../../../data/repositories/quiz_repository.dart';
+import '../../../data/models/quiz_model.dart';
 import '../../../data/models/schedule_item.dart';
 import '../controllers/teacher_dashboard_controller.dart';
 
@@ -205,9 +206,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildItemSubtitle(ScheduleItem item, QuizRepository quizRepo) {
-    if (item.isQuiz) {
-      final quiz =
-          quizRepo.quizzes.firstWhere((quiz) => quiz.id == item.relatedQuizId);
+    if (item.isQuiz && item.relatedQuizId != null) {
+      final quiz = quizRepo.quizzes.firstWhere(
+        (quiz) => quiz.id == item.relatedQuizId,
+        orElse: () => Quiz(
+          id: 'unknown',
+          title: 'Unknown Quiz',
+          description: 'Quiz not found',
+          subject: 'Unknown',
+          questions: [],
+        ),
+      );
       return Text(
         '${quiz.questions.length} вопросов • ${quiz.duration} мин',
       );

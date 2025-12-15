@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../../../core/services/notification_service.dart';
+import '../../../core/services/real_time_quiz_service.dart';
 import '../../../data/models/analytics_model.dart';
 import '../../../data/models/app_notification_model.dart';
 import '../../../data/models/financial_model.dart';
@@ -33,6 +34,7 @@ class TeacherDashboardController extends ChangeNotifier {
   NotificationService _notificationService;
   GradeSettingsRepository _gradeSettingsRepository;
   AuthRepository _authRepository;
+  RealTimeQuizService _realTimeService = RealTimeQuizService();
 
   List<FinancialRecord> _financialRecords = [];
   List<ScheduleItem> _schedule = [];
@@ -79,6 +81,7 @@ class TeacherDashboardController extends ChangeNotifier {
   void dispose() {
     _quizRepository.removeListener(_onRepositoryChanged);
     _authRepository.removeListener(_onAuthChanged);
+    _realTimeService.dispose();
     super.dispose();
   }
 
@@ -185,6 +188,8 @@ class TeacherDashboardController extends ChangeNotifier {
       );
     }
 
+    // Add any other scheduled items from the schedule (not just quizzes)
+    // This would include manually added schedule items
     items.sort((a, b) => a.date.compareTo(b.date));
     return items;
   }

@@ -212,7 +212,28 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                       ),
                       keyboardType: TextInputType.number,
                       maxLength: 4,
+                      enabled: widget.quiz?.isActive != true, // Disable if quiz is already active
                     ),
+                    if (widget.quiz?.pinCode != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.info, size: 16, color: Colors.blue),
+                            const SizedBox(width: 4),
+                            Text(
+                              'PIN: ${widget.quiz!.pinCode}',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(width: 8),
+                            if (widget.quiz?.pinExpiresAt != null)
+                              Text(
+                                'Срок действия: ${widget.quiz!.pinExpiresAt!.toString().substring(0, 16)}',
+                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                          ],
+                        ),
+                      ),
                     const SizedBox(height: 24),
                     Card(
                       child: Padding(

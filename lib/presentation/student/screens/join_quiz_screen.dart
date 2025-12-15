@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/colors.dart';
-import '../../../data/repositories/quiz_repository.dart';
 import '../../../data/models/quiz_model.dart';
+import '../../../data/repositories/quiz_repository.dart';
 import 'quiz_session_screen.dart';
 
 class JoinQuizScreen extends StatefulWidget {
@@ -16,7 +16,7 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
   final _pinController = TextEditingController();
   bool _isLoading = false;
 
-  void _joinQuiz() async {
+  Future<void> _joinQuiz() async {
     if (_pinController.text.length != 4) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Введите корректный 4-значный PIN-код')),
@@ -28,49 +28,70 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
       _isLoading = true;
     });
 
-    // Поиск активного квиза по PIN-коду
-    final quizRepo = context.read<QuizRepository>();
-    final activeQuiz = quizRepo.quizzes.firstWhere(
-      (quiz) {
-        final pin = quiz.pinCode ?? _getQuizPin(quiz);
-        return quiz.isActive && pin == _pinController.text;
-      },
-      orElse: () => Quiz(
-        id: '',
-        title: '',
-        description: '',
-        subject: '',
-        questions: [],
-      ),
-    );
+    try {
+      // Use the quiz repository to get all quizzes and find by PIN locally
+      final quizRepo = context.read<QuizRepository>();
 
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (activeQuiz.id.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Квиз с таким PIN-кодом не найден')),
-        );
-      }
-      return;
-    }
-
-    if (mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => QuizSessionScreen(quiz: activeQuiz),
+      // This may not work if we can't read quizzes due to security rules
+      // So we'll just look in the local repository first
+      final activeQuiz = quizRepo.quizzes.firstWhere(
+        (quiz) =>
+          quiz.isActive &&
+          quiz.pinCode != null &&
+          quiz.pinCode == _pinController.text,
+        orElse: () => Quiz(
+          id: '',
+          title: '',
+          description: '',
+          subject: '',
+          questions: [],
         ),
       );
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (activeQuiz.id.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Квиз с таким PIN-кодом не найден или не активен')),
+          );
+        }
+        return;
+      }
+
+      // Check if PIN has expired
+      if (activeQuiz.pinExpiresAt != null && DateTime.now().isAfter(activeQuiz.pinExpiresAt!)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Срок действия PIN-кода истек')),
+          );
+        }
+        return;
+      }
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => QuizSessionScreen(quiz: activeQuiz),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка при подключении к квизу: $e')),
+        );
+      }
     }
   }
 
-  String _getQuizPin(Quiz quiz) {
-    // Возвращаем PIN из квиза, если он есть, иначе генерируем на основе ID (резервный вариант)
-    return quiz.pinCode ?? (quiz.id.hashCode % 10000).toString().padLeft(4, '0');
-  }
 
   @override
   Widget build(BuildContext context) {

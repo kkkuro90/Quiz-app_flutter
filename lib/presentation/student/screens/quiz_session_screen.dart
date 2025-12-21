@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../../data/models/quiz_model.dart';
+import '../../../data/models/quiz_result_model.dart';
+import '../../../data/repositories/auth_repository.dart';
+import '../../../data/repositories/quiz_repository.dart';
 
 class QuizSessionScreen extends StatefulWidget {
   final Quiz quiz;
@@ -85,19 +89,25 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
   void _submitQuiz() {
     _timer.cancel();
 
-    // Расчет результатов
+    final quiz = widget.quiz;
     int totalPoints = 0;
     int maxPoints = 0;
+    final List<StudentAnswer> answers = [];
 
-    for (int i = 0; i < widget.quiz.questions.length; i++) {
-      final question = widget.quiz.questions[i];
-      final selected = _selectedAnswers[i] ?? [];
+    for (int i = 0; i < quiz.questions.length; i++) {
+      final question = quiz.questions[i];
+      final selected = _selectedAnswers[i] ?? <String>[];
       maxPoints += question.points;
+
+      bool isCorrect = false;
+      int points = 0;
 
       if (question.type == QuestionType.singleChoice) {
         final correctAnswer = question.answers.firstWhere((a) => a.isCorrect);
         if (selected.contains(correctAnswer.id)) {
-          totalPoints += question.points;
+          isCorrect = true;
+          points = question.points;
+          totalPoints += points;
         }
       } else if (question.type == QuestionType.multipleChoice) {
         final correctAnswers = question.answers
@@ -106,14 +116,47 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
             .toList();
         if (selected.length == correctAnswers.length &&
             selected.every((id) => correctAnswers.contains(id))) {
-          totalPoints += question.points;
+          isCorrect = true;
+          points = question.points;
+          totalPoints += points;
         }
       }
+
+      answers.add(
+        StudentAnswer(
+          questionId: question.id,
+          selectedAnswers: List<String>.from(selected),
+          textAnswer: null,
+          isCorrect: isCorrect,
+          points: points,
+          timeSpent: null,
+        ),
+      );
     }
 
-    final percentage = maxPoints > 0
-        ? totalPoints / maxPoints
-        : 0.0; // ← ИСПРАВЛЕНО: добавлено .0
+    final percentage = maxPoints > 0 ? totalPoints / maxPoints : 0.0;
+
+    // Сохраняем результат в репозиторий (бэкенд)
+    final authRepo = context.read<AuthRepository>();
+    final quizRepo = context.read<QuizRepository>();
+    final student = authRepo.currentUser;
+
+    if (student != null) {
+      final result = QuizResult(
+        id: '', // будет проставлен на стороне Firestore
+        quizId: quiz.id,
+        studentId: student.id,
+        studentName: student.name,
+        totalPoints: totalPoints,
+        maxPoints: maxPoints,
+        percentage: percentage,
+        completedAt: DateTime.now(),
+        answers: answers,
+      );
+
+      // Отправляем результат в репозиторий (и далее в Firestore)
+      quizRepo.addResult(result);
+    }
 
     showDialog(
       context: context,

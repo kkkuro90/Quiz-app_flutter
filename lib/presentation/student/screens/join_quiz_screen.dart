@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/colors.dart';
 import '../../../data/repositories/quiz_repository.dart';
+import '../../../data/repositories/auth_repository.dart';
 import '../../../data/models/quiz_model.dart';
 import 'quiz_session_screen.dart';
 
@@ -30,6 +31,9 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
 
     // Поиск активного квиза по PIN-коду
     final quizRepo = context.read<QuizRepository>();
+    final authRepo = context.read<AuthRepository>();
+    final student = authRepo.currentUser;
+
     final activeQuiz = quizRepo.quizzes.firstWhere(
       (quiz) {
         final pin = quiz.pinCode ?? _getQuizPin(quiz);
@@ -44,11 +48,10 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
       ),
     );
 
-    setState(() {
-      _isLoading = false;
-    });
-
     if (activeQuiz.id.isEmpty) {
+      setState(() {
+        _isLoading = false;
+      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Квиз с таким PIN-кодом не найден')),
@@ -56,6 +59,63 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
       }
       return;
     }
+
+    // Проверяем, проходил ли студент этот квиз ранее
+    if (student != null) {
+      final results =
+          await quizRepo.getStudentResultsWithSort(student.id);
+      final alreadyPassed =
+          results.any((r) => r.quizId == activeQuiz.id);
+      if (alreadyPassed) {
+        setState(() {
+          _isLoading = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Вы уже проходили этот тест, повторное прохождение недоступно',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    // Блокировка по времени: тест доступен только в интервале [start; start+duration]
+    final now = DateTime.now();
+    final start = activeQuiz.scheduledAt;
+    final end = start != null
+        ? start.add(Duration(minutes: activeQuiz.duration))
+        : null;
+    // Тест доступен только если есть scheduledAt и текущее время в интервале [start, end]
+    final isOpen = start != null &&
+        now.isAfter(start.subtract(const Duration(seconds: 1))) &&
+        end != null &&
+        now.isBefore(end);
+
+    if (!isOpen) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              start != null
+                  ? 'Тест будет доступен с ${start.day.toString().padLeft(2, '0')}.${start.month.toString().padLeft(2, '0')} ${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}'
+                  : 'Тест сейчас недоступен',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
 
     if (mounted) {
       Navigator.push(

@@ -9,6 +9,7 @@ import '../../../data/models/schedule_item.dart';
 import '../../../data/models/study_material_model.dart';
 import '../../../data/models/quiz_model.dart';
 import '../../../data/repositories/quiz_repository.dart';
+import '../../../data/repositories/auth_repository.dart';
 import '../controllers/teacher_dashboard_controller.dart';
 import '../../shared/widgets/quiz_card.dart';
 import 'calendar_screen.dart';
@@ -16,6 +17,7 @@ import 'grade_settings_screen.dart';
 import 'create_quiz_screen.dart';
 import 'quiz_analytics_screen.dart';
 import 'analytics_screen.dart';
+import 'quiz_details_screen.dart';
 
 class TeacherHomeScreen extends StatefulWidget {
   const TeacherHomeScreen({super.key});
@@ -38,7 +40,19 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
         final analytics = controller.analyticsSummary;
 
         final quizRepo = context.watch<QuizRepository>();
-        final activeQuizzes = quizRepo.quizzes.where((q) => q.isActive).toList();
+        final activeQuizzes =
+            quizRepo.quizzes.where((q) => q.isActive).toList();
+
+        // Для текущей версии показываем все квизы учителя (один аккаунт преподавателя),
+        // при этом сортируем так, чтобы новые (по времени проведения) были первыми.
+        final myQuizzes = [...quizRepo.quizzes]
+          ..sort(
+            (a, b) {
+              final aDate = a.scheduledAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+              final bDate = b.scheduledAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+              return bDate.compareTo(aDate); // по убыванию даты
+            },
+          );
 
         return Container(
           color: AppColors.background,
@@ -140,15 +154,16 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                     );
                   }),
                 ],
+                if (myQuizzes.isNotEmpty) ...[
+                  const SizedBox(height: 32),
+                  _buildMyQuizzesCard(myQuizzes),
+                ],
+                const SizedBox(height: 32),
+                _buildScheduleCard(controller.schedule, controller),
                 const SizedBox(height: 32),
                 _buildQuickActions(context),
                 const SizedBox(height: 16),
                 _buildGradeConversionCard(controller, grade, gradePercentage),
-                const SizedBox(height: 16),
-                _buildScheduleCard(
-                  controller.upcomingQuizzes,
-                  controller,
-                ),
                 const SizedBox(height: 16),
                 _buildProgressCard(controller.progressMetrics),
                 const SizedBox(height: 16),
@@ -261,6 +276,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
       ),
     );
   }
+  
 
   Widget _buildSliderRow({
     required String label,
@@ -399,10 +415,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                             child: Text('Задача'),
                           ),
                           DropdownMenuItem(
-                            value: ScheduleItemType.quiz,
-                            child: Text('Квиз'),
-                          ),
-                          DropdownMenuItem(
                             value: ScheduleItemType.material,
                             child: Text('Материал'),
                           ),
@@ -484,6 +496,54 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildMyQuizzesCard(List<Quiz> myQuizzes) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Мои квизы',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              // По высоте вмещается примерно 3 элемента, остальные доступны по прокрутке
+              height: 200,
+              child: ListView.builder(
+                itemCount: myQuizzes.length,
+                itemBuilder: (context, index) {
+                  final quiz = myQuizzes[index];
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(quiz.title),
+                    subtitle: Text(
+                      quiz.description.isEmpty
+                          ? 'Без описания'
+                          : quiz.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => QuizDetailsScreen(quiz: quiz),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

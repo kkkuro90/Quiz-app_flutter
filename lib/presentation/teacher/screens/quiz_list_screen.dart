@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/quiz_model.dart';
 import '../../../data/repositories/quiz_repository.dart';
+import '../../../core/services/export_service.dart';
 import 'create_quiz_screen.dart';
 import 'quiz_analytics_screen.dart';
 
@@ -180,7 +181,7 @@ class QuizCard extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      _startQuiz(context, quiz);
+                      _startQuiz(context, quiz, quizRepo);
                     },
                     icon: const Icon(Icons.play_arrow),
                     label: const Text('Запустить'),
@@ -190,7 +191,7 @@ class QuizCard extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      _scheduleQuiz(context, quiz);
+                      _scheduleQuiz(context, quiz, quizRepo);
                     },
                     icon: const Icon(Icons.schedule),
                     label: const Text('Запланировать'),
@@ -236,7 +237,7 @@ class QuizCard extends StatelessWidget {
     }
   }
 
-  void _startQuiz(BuildContext context, Quiz quiz) {
+  void _startQuiz(BuildContext context, Quiz quiz, QuizRepository quizRepo) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -279,6 +280,8 @@ class QuizCard extends StatelessWidget {
             onPressed: () {
               Navigator.pop(context);
               if (context.mounted) {
+                // Обновляем статус квиза как активный
+                quizRepo.updateQuiz(quiz.copyWith(isActive: true));
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Квиз запущен!')),
                 );
@@ -291,26 +294,117 @@ class QuizCard extends StatelessWidget {
     );
   }
 
-  void _scheduleQuiz(BuildContext context, Quiz quiz) {
+  void _scheduleQuiz(BuildContext context, Quiz quiz, QuizRepository quizRepo) {
     showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     ).then((selectedDate) {
-      if (selectedDate != null && context.mounted) {
+      if (selectedDate == null || !context.mounted) return;
+
+      showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      ).then((selectedTime) {
+        if (selectedTime == null || !context.mounted) return;
+
+        final scheduledAt = DateTime(
+          selectedDate.year,
+          selectedDate.month,
+          selectedDate.day,
+          selectedTime.hour,
+          selectedTime.minute,
+        );
+
+        quizRepo.updateQuiz(
+          quiz.copyWith(
+            scheduledAt: scheduledAt,
+            isActive: false,
+          ),
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(
-                  'Квиз запланирован на ${selectedDate.toString().split(' ')[0]}')),
+            content: Text(
+              'Квиз запланирован на ${scheduledAt.toString().substring(0, 16)}',
+            ),
+          ),
         );
-      }
+      });
     });
   }
 
   void _exportQuiz(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Функция экспорта в разработке')),
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(
+                title: Text('Экспорт квиза'),
+                subtitle: Text('Выберите формат для экспорта'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.description),
+                title: const Text('GIFT (Moodle)'),
+                onTap: () {
+                  final content = ExportService.exportToGiftFormat(quiz);
+                  Navigator.pop(ctx);
+                  _showExportResult(context, 'GIFT', content);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.table_chart),
+                title: const Text('CSV'),
+                onTap: () {
+                  final content = ExportService.exportToCsv(quiz);
+                  Navigator.pop(ctx);
+                  _showExportResult(context, 'CSV', content);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.code),
+                title: const Text('JSON'),
+                onTap: () {
+                  final content = ExportService.exportToJson(quiz);
+                  Navigator.pop(ctx);
+                  _showExportResult(context, 'JSON', content);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showExportResult(
+    BuildContext context,
+    String format,
+    String content,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text('Экспорт в $format'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: SelectableText(content),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Закрыть'),
+            ),
+          ],
+        );
+      },
     );
   }
 

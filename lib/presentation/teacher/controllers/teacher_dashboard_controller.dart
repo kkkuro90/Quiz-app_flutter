@@ -36,6 +36,7 @@ class TeacherDashboardController extends ChangeNotifier {
 
   List<FinancialRecord> _financialRecords = [];
   List<ScheduleItem> _schedule = [];
+  List<ScheduleItem> _manualScheduleItems = []; // События, добавленные вручную учителем
   List<StudyMaterial> _materials = [];
   List<ProgressMetric> _progressMetrics = [];
   QuizAnalyticsSummary _analyticsSummary = QuizAnalyticsSummary.empty();
@@ -113,7 +114,8 @@ class TeacherDashboardController extends ChangeNotifier {
   }
 
   void addScheduleItem(ScheduleItem item) {
-    _schedule.add(item);
+    _manualScheduleItems.add(item);
+    _updateSchedule();
     notifyListeners();
   }
 
@@ -138,13 +140,20 @@ class TeacherDashboardController extends ChangeNotifier {
   }
 
   void _bootstrapData() {
-    _schedule = _buildSchedule();
+    _updateSchedule();
     _materials = _buildMaterials();
     _financialRecords = _buildFinancialRecords();
     _progressMetrics = _buildProgress();
     _analyticsSummary = _buildAnalyticsSummary();
     _syncNotifications();
     notifyListeners();
+  }
+
+  void _updateSchedule() {
+    // Объединяем автоматически генерируемые события с вручную добавленными
+    final autoSchedule = _buildSchedule();
+    _schedule = [...autoSchedule, ..._manualScheduleItems];
+    _schedule.sort((a, b) => a.date.compareTo(b.date));
   }
 
   void _onRepositoryChanged() {
@@ -184,6 +193,27 @@ class TeacherDashboardController extends ChangeNotifier {
         ),
       );
     }
+
+    items.addAll([
+      ScheduleItem(
+        id: 'task-budget',
+        title: 'Обновить финансовый план',
+        description: 'Сверка бюджета за текущую неделю',
+        date: DateTime.now().add(const Duration(days: 1, hours: 3)),
+        type: ScheduleItemType.task,
+        teacherId: currentUserId,
+        createdAt: DateTime.now(),
+      ),
+      ScheduleItem(
+        id: 'task-mentor',
+        title: 'Лекция: подготовка к Олимпиаде',
+        description: 'Загрузить презентацию и материалы для команды',
+        date: DateTime.now().add(const Duration(days: 3, hours: 2)),
+        type: ScheduleItemType.material,
+        teacherId: currentUserId,
+        createdAt: DateTime.now(),
+      ),
+    ]);
 
     items.sort((a, b) => a.date.compareTo(b.date));
     return items;

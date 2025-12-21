@@ -1,61 +1,107 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+# Dependencies
+/packages/
+/.packages
+/pubspec.lock
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
+# Generated plugin symlinks
+/flutter-plugins
+/flutter-plugin-dependencies
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
-.dart_tool/
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
+# Flutter build directory
 /build/
+/.dart_tool/
+
+# Android
+/android/app/src/main/assets/flutter_assets/packages/
+/android/.gradle/
+/android/local.properties
+/android/app/.cxx/
+/android/gradlew
+/android/gradlew.bat
+/android/gradle/
+
+# iOS
+/ios/Flutter/flutter_assets/packages/
+/ios/Flutter/Debug.xcconfig
+/ios/Flutter/Release.xcconfig
+/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+/ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme
+/ios/Runner.xcodeproj/xcuserdata/
+/ios/Pods/
+/ios/.symlinks/
+/ios/build/
+/ios/Runner.app/
+/ios/Podfile.lock
+
+# Web
+/web/.build/
+/web/build/
+
+# Windows
+/windows/Flutter/flutter_assets/packages/
+/windows/runner/Debug/
+/windows/runner/Release/
+/windows/Flutter/ephemeral/
+/windows/.symlinks/
+/windows/APP.exe
+/windows/APP.exe.config
+
+# Linux
+/linux/Flutter/flutter_assets/packages/
+/linux/bundle/
+/linux/.symlinks/
+
+# macOS
+/macos/Flutter/flutter_assets/packages/
+/macos/Flutter/ephemeral/
+/macos/.symlinks/
+/macos/Build/
+
+# Coverage
 /coverage/
 
-# Symbolication related
-app.*.symbols
+# Logs
+/logs/
+*.log
 
-# Obfuscation related
-app.*.map.json
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
-/android/gradle.properties
+# Environment
+/.env
+/.env.local
+/.env.development.local
+/.env.test.local
+/.env.production.local
 
-# Firebase Data Connect (not used in this project)
-dataconnect/
-dataconnect_generated/
+# IDE
+/.idea/
+*.iml
+*.iws
+.vscode/
+.settings/
 
-# Firebase
-.firebase/
-.firebase-adminsdk-*.json
-.firebaserc
-firebase-debug.log
-firebase-debug.*.log
+# Secrets and config
+/.firebaserc
+/firebase-debug.log*
+/firebase-export-*
 
-# Firebase emulators
-.emulators/
-/functions/node_modules
+# Database
+/firestore-debug.log*
+/storage-debug.log*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Firebase Functions
+/functions/node_modules/
+/functions/.npm/

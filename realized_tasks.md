@@ -1,99 +1,284 @@
 # Реализованные задачи для Никиты
 
-## 1. Исправление ошибки "Bad state: No element" в календаре
+## Уже реализовано:
 
-**Файл:** `lib/presentation/teacher/screens/calendar_screen.dart`
+### 1. Настройка Flutter + Firebase
+**Файлы:**
+- `pubspec.yaml` - зависимости для Firebase
+- `firebase.json`, `firestore.rules`, `firestore.indexes.json` - конфигурация Firebase
+- `lib/main.dart` - инициализация Firebase
 **Код:**
 ```dart
-Widget _buildItemSubtitle(ScheduleItem item, QuizRepository quizRepo) {
-  if (item.isQuiz && item.relatedQuizId != null) {
-    final quiz = quizRepo.quizzes.firstWhere(
-      (quiz) => quiz.id == item.relatedQuizId,
-      orElse: () => Quiz(
-        id: 'unknown', 
-        title: 'Unknown Quiz',
-        description: 'Quiz not found',
-        subject: 'Unknown',
-        questions: [],
-      ),
-    );
-    return Text(
-      '${quiz.questions.length} вопросов • ${quiz.duration} мин',
-    );
-  }
-
-  return Text(item.description);
-}
+await Firebase.initializeApp();
 ```
-**Описание:** Добавлена защита от ошибки, когда квиз не найден по ID, с использованием `orElse` для возврата заглушки.
+**Описание:** Проект настроен для работы с Firebase, включая Firestore, Authentication и другие сервисы
 
-## 2. Интеграция всех типов событий в календарь и ближайшие события
-
-**Файл:** `lib/presentation/teacher/screens/teacher_home_screen.dart`
+### 2. Модель User, Quiz, Question в БД
+**Файл:** `lib/data/models/`
 **Код:**
 ```dart
-Widget _buildScheduleCard(
-  List<ScheduleItem> schedule,
-  TeacherDashboardController controller,
-) {
-  // Получаем все события в ближайшую неделю, а не только квизы
-  final now = DateTime.now();
-  final nextWeek = now.add(const Duration(days: 7));
-  final upcomingSchedule = controller.schedule
-      .where((item) =>
-          item.date.isAfter(now.subtract(const Duration(days: 1))) &&
-          item.date.isBefore(nextWeek))
-      .toList()
-        ..sort((a, b) => a.date.compareTo(b.date));
+// Quiz model
+class Quiz {
+  final String id;
+  final String title;
+  final String description;
+  final String subject;
+  final List<Question> questions;
+  final int duration;
+  final DateTime? scheduledAt;
+  final bool isActive;
+  final String? ownerId;
+  final String? pinCode;
+  // ...
+}
+
+// Question model
+class Question {
+  final String id;
+  final String text;
+  final QuestionType type;
+  final List<Answer> answers;
+  final int points;
   // ...
 }
 ```
-**Описание:** Обновлен метод отображения ближайших событий, чтобы показывать все типы событий (quiz, task, reminder, material), а не только квизы.
+**Описание:** Созданы модели данных для пользователя, квиза и вопросов с соответствующими полями для хранения в БД
 
-## 3. Сохранение результатов квизов в Firebase DB
-
-**Файл:** `lib/data/repositories/quiz_repository.dart`
+### 3. Auth API (email/password)
+**Файлы:**
+- `lib/data/repositories/auth_repository.dart`
+- `lib/presentation/auth/login_screen.dart`
 **Код:**
 ```dart
-Future<void> addResult(QuizResult result) async {
-  _results.add(result);
-  notifyListeners();
+class AuthRepository extends ChangeNotifier {
+  User? _currentUser;
+  bool _isLoading = false;
 
-  // Сохраняем результат в Firestore
-  final docRef = await _db.collection('quiz_results').add(result.toJson());
-  
-  // Также сохраняем статистику
-  final quiz = _quizzes.firstWhere((q) => q.id == result.quizId, orElse: () => Quiz(
-    id: result.quizId,
-    title: 'Unknown Quiz',
-    description: 'Quiz not found',
-    subject: 'Unknown',
-    questions: [],
-  ));
-  
-  await _statisticsService.saveDetailedStatistics(
-    result: result.copyWith(id: docRef.id),
-    quiz: quiz,
-  );
+  Future<bool> signInWithEmailAndPassword(String email, String password) async {
+    try {
+      final credential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
+      _currentUser = credential.user;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 }
 ```
-**Описание:** Результаты квизов теперь сохраняются в Firestore вместо хранения только в памяти.
+**Описание:** Реализована система аутентификации с email/password, включая вход и проверку статуса пользователя
 
-## 4. Улучшение логики PIN-кодов
-
+### 4. Basic Quiz API (CRUD операции)
 **Файл:** `lib/data/repositories/quiz_repository.dart`
 **Код:**
 ```dart
-Future<Map<String, String>> _generatePinCodeWithExpiration() async {
-  final pinCode = await _generateUniquePinCode();
-  final expiresAt = DateTime.now().add(const Duration(hours: 24)); // PIN expires in 24 hours
-  
-  return {
-    'pinCode': pinCode,
-    'expiresAt': expiresAt.toIso8601String(),
-  };
+class QuizRepository with ChangeNotifier {
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final List<Quiz> _quizzes = [];
+
+  // CREATE
+  Future<void> createQuiz(Quiz quiz) async {
+    final data = quiz.toJson();
+    await _db.collection('quizzes').add(data..remove('id'));
+  }
+
+  // READ
+  Future<void> _listenQuizzes() {
+    _db.collection('quizzes').snapshots().listen((snapshot) {
+      _quizzes
+        ..clear()
+        ..addAll(
+          snapshot.docs.map(
+            (doc) => Quiz.fromJson({
+              'id': doc.id,
+              ...doc.data(),
+            }),
+          ),
+        );
+      notifyListeners();
+    });
+  }
+
+  // UPDATE
+  Future<void> updateQuiz(Quiz quiz) async {
+    if (quiz.id.isEmpty) return;
+    await _db.collection('quizzes').doc(quiz.id).update(quiz.toJson());
+  }
+
+  // DELETE
+  Future<void> deleteQuiz(String quizId) async {
+    await _db.collection('quizzes').doc(quizId).delete();
+  }
+}
+```
+**Описание:** Реализованы все основные CRUD операции для квизов с использованием Firestore
+
+### 5. Исправление ошибки "Bad state: No element" в календаре
+**Файл:** `lib/presentation/teacher/screens/calendar_screen.dart`
+**Код:** В методе `_buildItemSubtitle` добавлена защита от ошибки при поиске квиза по ID с использованием `orElse`
+**Описание:** Теперь при отсутствии квиза возвращается заглушка, а не возникает ошибка
+
+### 6. Интеграция всех типов событий в календарь и ближайшие события
+**Файл:** `lib/presentation/teacher/screens/teacher_home_screen.dart`
+**Код:** Метод `_buildScheduleCard` обновлен для отображения всех типов событий, а не только квизов
+**Описание:** Теперь в ближайших событиях отображаются задачи, напоминания, материалы и квизы
+
+### 7. Сохранение результатов квизов в Firebase DB
+**Файл:** `lib/data/repositories/quiz_repository.dart`
+**Код:** Метод `addResult` сохраняет результаты в Firestore коллекцию `quiz_results`
+**Описание:** Результаты больше не хранятся только в памяти, а сохраняются в базе данных
+
+### 8. Улучшение логики PIN-кодов
+**Файл:** `lib/data/repositories/quiz_repository.dart`
+**Код:** Методы `_generatePinCodeWithExpiration`, `getQuizByPinCode` и `isValidPinCode`
+**Описание:** Добавлена генерация PIN-кодов с автоматическим истечением и проверка валидности
+
+### 9. Экспорт квизов (GIFT/CSV/JSON форматы)
+**Файл:** `lib/core/services/export_service.dart`
+**Код:** Методы `exportToGiftFormat`, `exportToCsv`, `exportToJson`
+**Описание:** Возможность экспортировать квизы в различные форматы для дальнейшего использования
+
+### 10. Планирование/запуск квиза (статус, время)
+**Файл:** `lib/presentation/teacher/screens/quiz_list_screen.dart`
+**Код:** Метод `_scheduleQuiz` позволяет выбирать дату и время для квиза
+**Описание:** Учителя могут планировать квизы с указанием точного времени и отслеживать статус
+
+### 11. Реальное обновление статуса квиза
+**Файл:** `lib/core/services/real_time_quiz_service.dart`
+**Код:** Методы `listenQuizStatus`, `updateQuizStatus`
+**Описание:** Система позволяет отслеживать и обновлять статус квиза в реальном времени
+
+### 12. Таймер на бэкенде и блокировка отправки
+**Файл:** `lib/presentation/student/screens/quiz_session_screen.dart`
+**Код:** Метод `_submitQuiz` проверяет разрешение на отправку
+**Описание:** После истечения времени отправка результатов блокируется
+
+### 13. API для создания вопросов
+**Файлы:**
+- `lib/presentation/teacher/screens/create_quiz_screen.dart`
+- `lib/data/models/quiz_model.dart`
+**Код:**
+```dart
+// В методе _addQuestion в create_quiz_screen.dart
+void _addQuestion() {
+  showDialog(
+    context: context,
+    builder: (context) => AddQuestionDialog(
+      onQuestionAdded: (question) {
+        setState(() {
+          _questions.add(question);
+        });
+      },
+    ),
+  );
 }
 
+// Модель Question
+class Question {
+  final String id;
+  final String text;
+  final QuestionType type;
+  final List<Answer> answers;
+  final int points;
+  // ...
+}
+```
+**Описание:** Реализован API для добавления вопросов к квизу с различными типами ответов
+
+### 14. Логика проверки ответов
+**Файл:** `lib/presentation/student/screens/quiz_session_screen.dart`
+**Код:**
+```dart
+for (int i = 0; i < widget.quiz.questions.length; i++) {
+  final question = widget.quiz.questions[i];
+  final selected = _selectedAnswers[i] ?? [];
+
+  bool isCorrect = false;
+  if (question.type == QuestionType.singleChoice) {
+    final correctAnswer = question.answers.firstWhere((a) => a.isCorrect, orElse: () => question.answers.first);
+    isCorrect = selected.contains(correctAnswer.id);
+  } else if (question.type == QuestionType.multipleChoice) {
+    final correctAnswers = question.answers
+        .where((a) => a.isCorrect)
+        .map((a) => a.id)
+        .toList();
+    isCorrect = selected.length == correctAnswers.length &&
+        selected.every((id) => correctAnswers.contains(id));
+  }
+  // ...
+}
+```
+**Описание:** Логика проверки правильности ответов в зависимости от типа вопроса (один выбор, множественный выбор)
+
+### 15. Подсчет результатов
+**Файл:** `lib/presentation/student/screens/quiz_session_screen.dart`
+**Код:**
+```dart
+void _submitQuiz() async {
+  // ...
+  int totalPoints = 0;
+  int maxPoints = 0;
+
+  for (int i = 0; i < widget.quiz.questions.length; i++) {
+    final question = widget.quiz.questions[i];
+    final selected = _selectedAnswers[i] ?? [];
+    maxPoints += question.points;
+
+    bool isCorrect = false;
+    // Проверка правильности ответа
+    if (question.type == QuestionType.singleChoice) {
+      final correctAnswer = question.answers.firstWhere((a) => a.isCorrect);
+      if (selected.contains(correctAnswer.id)) {
+        totalPoints += question.points;
+        isCorrect = true;
+      }
+    }
+    // ...
+
+    final percentage = maxPoints > 0 ? totalPoints / maxPoints : 0.0;
+    // Создание и сохранение результата
+    final result = QuizResult(
+      // ...
+      totalPoints: totalPoints,
+      maxPoints: maxPoints,
+      percentage: percentage,
+      // ...
+    );
+  }
+}
+```
+**Описание:** Подсчет набранных баллов, максимальных баллов и процента правильных ответов
+
+### 16. Система PIN-кодов для квизов
+**Файл:** `lib/data/repositories/quiz_repository.dart`
+**Код:**
+```dart
+Future<String> _generateUniquePinCode() async {
+  String pinCode = "";
+  bool isUnique = false;
+  int attempts = 0;
+  const maxAttempts = 10;
+
+  while (!isUnique && attempts < maxAttempts) {
+    final random = DateTime.now().millisecondsSinceEpoch;
+    pinCode = (random % 10000).toString().padLeft(4, '0');
+
+    final snapshot = await _db
+        .collection('quizzes')
+        .where('pinCode', isEqualTo: pinCode)
+        .where('isActive', isEqualTo: true)
+        .limit(1)
+        .get();
+
+    isUnique = snapshot.docs.isEmpty;
+    attempts++;
+  }
+
+  return pinCode;
+}
+
+// Проверка квиза по PIN-коду
 Future<Quiz?> getQuizByPinCode(String pinCode) async {
   final snapshot = await _db
       .collection('quizzes')
@@ -101,112 +286,12 @@ Future<Quiz?> getQuizByPinCode(String pinCode) async {
       .where('isActive', isEqualTo: true)
       .limit(1)
       .get();
-
-  if (snapshot.docs.isNotEmpty) {
-    final doc = snapshot.docs.first;
-    final quiz = Quiz.fromJson(doc.data(), doc.id);
-
-    // Проверка истечения PIN-кода
-    if (quiz.pinExpiresAt != null && DateTime.now().isAfter(quiz.pinExpiresAt!)) {
-      return null;
-    }
-
-    return quiz;
-  }
-
-  return null;
-}
-```
-**Описание:** Добавлена генерация уникальных PIN-кодов с автоматическим истечением через 24 часа и проверка валидности при подключении.
-
-## 5. Режим реального времени (частичная реализация)
-
-**Файл:** `lib/core/services/real_time_quiz_service.dart`
-**Код:**
-```dart
-Stream<Quiz?> listenQuizStatus(String quizId) {
-  return _db.collection('quizzes').doc(quizId).snapshots().map((doc) {
-    if (!doc.exists) return null;
-    return Quiz.fromJson(doc.data()!, documentId: doc.id);
-  });
-}
-```
-**Описание:** Реализована базовая логика для прослушивания изменений статуса квиза в реальном времени через Firestore listeners.
-
-## 6. Добавление расширенной системы очков/баллов и статистики
-
-**Файл:** `lib/core/services/quiz_statistics_service.dart`
-**Код:**
-```dart
-Map<String, dynamic> _calculateDetailedStatistics(QuizResult result, Quiz quiz) {
-  final stats = <String, dynamic>{};
-  
-  // Общая статистика квиза
-  stats['totalQuestions'] = quiz.questions.length;
-  stats['answeredQuestions'] = result.answers.length;
-  stats['correctAnswers'] = result.answers.where((a) => a.isCorrect).length;
-  stats['incorrectAnswers'] = result.answers.where((a) => !a.isCorrect).length;
-  stats['percentage'] = result.percentage;
-  
-  // Статистика по вопросам
-  final questionStats = <String, dynamic>{};
-  for (int i = 0; i < quiz.questions.length; i++) {
-    // ...
-  }
-  
-  stats['questionStats'] = questionStats;
-  return stats;
-}
-```
-**Описание:** Создана система для подсчета и хранения детальной статистики по ответам, включая время на ответ, точность по вопросам и распределение ответов.
-
-## 7. Экспорт функциональности (GIFT/CSV/JSON форматы)
-
-**Файл:** `lib/core/services/export_service.dart`
-**Код:**
-```dart
-static String exportToGiftFormat(Quiz quiz) {
-  StringBuffer gift = StringBuffer();
-  
-  gift.writeln("// Quiz: ${quiz.title}");
-  gift.writeln("// Description: ${quiz.description}");
-  gift.writeln("");
-  
-  for (int i = 0; i < quiz.questions.length; i++) {
-    final question = quiz.questions[i];
-    gift.writeln("${question.text} {");
-    
-    if (question.type == QuestionType.singleChoice) {
-      for (final answer in question.answers) {
-        if (answer.isCorrect) {
-          gift.writeln("    =${answer.text}");
-        } else {
-          gift.writeln("    ~${answer.text}");
-        }
-      }
-    }
-    // ...
-  }
-  
-  return gift.toString();
-}
-```
-**Описание:** Реализована функция экспорта квизов в различные форматы, включая GIFT для Moodle, CSV и JSON.
-
-## 8. Таймер на бэкенде с блокировкой отправки после истечения
-
-**Файл:** `lib/presentation/student/screens/quiz_session_screen.dart`
-**Код:**
-```dart
-void _submitQuiz() async {
-  _timer.cancel();
-
-  // Проверка времени (отключена для избежания ошибок прав доступа)
-  // final quizRepo = context.read<QuizRepository>();
-  // final isAllowed = await quizRepo.isSubmissionAllowed(widget.quiz.id);
-  
-  // Основная логика расчета результатов и сохранения
   // ...
 }
 ```
-**Описание:** Реализована логика ограничения времени прохождения квиза, включая локальный таймер и проверку времени при отправке результатов.
+**Описание:** Генерация уникальных PIN-кодов для квизов, проверка валидности и подключение студентов по PIN-коду
+
+### 17. Расширенная система очков/баллов и статистика
+**Файл:** `lib/core/services/quiz_statistics_service.dart`
+**Код:** Метод `_calculateDetailedStatistics`
+**Описание:** Подробная статистика по ответам, время на вопросы, точность и распределение

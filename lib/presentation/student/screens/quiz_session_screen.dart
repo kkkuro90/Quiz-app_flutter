@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../../data/models/quiz_model.dart';
 import '../../../data/models/quiz_result_model.dart';
+import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/quiz_repository.dart';
 import '../../../core/services/real_time_quiz_service.dart';
 
@@ -138,77 +139,74 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
   void _submitQuiz() async {
     _timer.cancel();
 
-    // Skip the server time check to avoid permission issues
-    // The local countdown timer already enforces time limits
-
-    // Расчет результатов
+    final quiz = widget.quiz;
     int totalPoints = 0;
     int maxPoints = 0;
-    final List<StudentAnswer> studentAnswers = [];
+    final List<StudentAnswer> answers = [];
 
-    for (int i = 0; i < widget.quiz.questions.length; i++) {
-      final question = widget.quiz.questions[i];
-      final selected = _selectedAnswers[i] ?? [];
+    for (int i = 0; i < quiz.questions.length; i++) {
+      final question = quiz.questions[i];
+      final selected = _selectedAnswers[i] ?? <String>[];
       maxPoints += question.points;
 
       bool isCorrect = false;
+      int points = 0;
+
       if (question.type == QuestionType.singleChoice) {
-        final correctAnswer = question.answers.firstWhere((a) => a.isCorrect, orElse: () => question.answers.first);
-        isCorrect = selected.contains(correctAnswer.id);
+        final correctAnswers = question.answers.where((a) => a.isCorrect).toList();
+        if (correctAnswers.isNotEmpty && selected.contains(correctAnswers.first.id)) {
+          isCorrect = true;
+          points = question.points;
+          totalPoints += points;
+        }
       } else if (question.type == QuestionType.multipleChoice) {
         final correctAnswers = question.answers
             .where((a) => a.isCorrect)
             .map((a) => a.id)
             .toList();
-        isCorrect = selected.length == correctAnswers.length &&
-            selected.every((id) => correctAnswers.contains(id));
-      }
-
-      if (isCorrect) {
-        totalPoints += question.points;
-      }
-
-      // Calculate time spent on this question
-      Duration? timeSpent = null;
-      final questionStartTime = _questionStartTimes[i];
-
-      if (questionStartTime != null) {
-        // If this is the last question in the quiz, use current time
-        // Otherwise, use the time when the user moved to the next question
-        if (i == _currentQuestionIndex && _currentQuestionIndex == widget.quiz.questions.length - 1) {
-          // If this is the last question and user is currently on it, use current time
-          timeSpent = DateTime.now().difference(questionStartTime);
-        } else if (i < widget.quiz.questions.length - 1) {
-          // If this is not the last question in the quiz, use the start time of the next question
-          final nextQuestionStartTime = _questionStartTimes[i + 1];
-          if (nextQuestionStartTime != null) {
-            timeSpent = nextQuestionStartTime.difference(questionStartTime);
-          } else {
-            // If no start time recorded for next question, use current time
-            timeSpent = DateTime.now().difference(questionStartTime);
-          }
-        } else {
-          // For the last question in the quiz, use current time if it was viewed
-          timeSpent = DateTime.now().difference(questionStartTime);
+        if (selected.length == correctAnswers.length &&
+            selected.every((id) => correctAnswers.contains(id))) {
+          isCorrect = true;
+          points = question.points;
+          totalPoints += points;
         }
       }
 
-      // Add student answer to list
-      studentAnswers.add(
+      answers.add(
         StudentAnswer(
           questionId: question.id,
-          selectedAnswers: selected,
-          textAnswer: null, // We don't support text answers in this implementation
+          selectedAnswers: List<String>.from(selected),
+          textAnswer: null,
           isCorrect: isCorrect,
-          points: isCorrect ? question.points : 0,
-          timeSpent: timeSpent,
+          points: points,
+          timeSpent: null,
         ),
       );
     }
 
-    final percentage = maxPoints > 0
-        ? totalPoints / maxPoints
-        : 0.0; // ← ИСПРАВЛЕНО: добавлено .0
+    final percentage = maxPoints > 0 ? totalPoints / maxPoints : 0.0;
+
+    // Сохраняем результат в репозиторий (бэкенд)
+    final authRepo = context.read<AuthRepository>();
+    final quizRepo = context.read<QuizRepository>();
+    final student = authRepo.currentUser;
+
+    if (student != null) {
+      final result = QuizResult(
+        id: '', // будет проставлен на стороне Firestore
+        quizId: quiz.id,
+        studentId: student.id,
+        studentName: student.name,
+        totalPoints: totalPoints,
+        maxPoints: maxPoints,
+        percentage: percentage,
+        completedAt: DateTime.now(),
+        answers: answers,
+      );
+
+      // Отправляем результат в репозиторий (и далее в Firestore)
+      quizRepo.addResult(result);
+    }
 
     // Create and save quiz result
     final result = QuizResult(
@@ -220,11 +218,10 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
       maxPoints: maxPoints,
       percentage: percentage,
       completedAt: DateTime.now(),
-      answers: studentAnswers,
+      answers: answers,
     );
 
     // Save result to repository (which also saves to Firestore)
-    final quizRepo = context.read<QuizRepository>();
     quizRepo.addResult(result);
 
     // Skip updating server status to avoid permission issues

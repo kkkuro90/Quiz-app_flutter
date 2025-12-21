@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/colors.dart';
+import '../../../data/repositories/quiz_repository.dart';
+import '../../../data/repositories/auth_repository.dart';
 import '../../../data/models/quiz_model.dart';
 import '../../../data/repositories/quiz_repository.dart';
 import 'quiz_session_screen.dart';
@@ -28,68 +30,107 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
       _isLoading = true;
     });
 
-    try {
-      // Use the quiz repository to get all quizzes and find by PIN locally
-      final quizRepo = context.read<QuizRepository>();
+    // Поиск активного квиза по PIN-коду
+    final quizRepo = context.read<QuizRepository>();
+    final authRepo = context.read<AuthRepository>();
+    final student = authRepo.currentUser;
 
-      // This may not work if we can't read quizzes due to security rules
-      // So we'll just look in the local repository first
-      final activeQuiz = quizRepo.quizzes.firstWhere(
-        (quiz) =>
-          quiz.isActive &&
-          quiz.pinCode != null &&
-          quiz.pinCode == _pinController.text,
-        orElse: () => Quiz(
-          id: '',
-          title: '',
-          description: '',
-          subject: '',
-          questions: [],
-        ),
-      );
+    final activeQuiz = quizRepo.quizzes.firstWhere(
+      (quiz) {
+        final pin = quiz.pinCode ?? _getQuizPin(quiz);
+        return quiz.isActive && pin == _pinController.text;
+      },
+      orElse: () => Quiz(
+        id: '',
+        title: '',
+        description: '',
+        subject: '',
+        questions: [],
+      ),
+    );
 
+    if (activeQuiz.id.isEmpty) {
       setState(() {
         _isLoading = false;
       });
-
-      if (activeQuiz.id.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Квиз с таким PIN-кодом не найден или не активен')),
-          );
-        }
-        return;
-      }
-
-      // Check if PIN has expired
-      if (activeQuiz.pinExpiresAt != null && DateTime.now().isAfter(activeQuiz.pinExpiresAt!)) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Срок действия PIN-кода истек')),
-          );
-        }
-        return;
-      }
-
       if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => QuizSessionScreen(quiz: activeQuiz),
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Квиз с таким PIN-кодом не найден')),
+        );
+      }
+      return;
+    }
+
+    // Проверяем, проходил ли студент этот квиз ранее
+    if (student != null) {
+      final results =
+          await quizRepo.getStudentResultsWithSort(student.id);
+      final alreadyPassed =
+          results.any((r) => r.quizId == activeQuiz.id);
+      if (alreadyPassed) {
+        setState(() {
+          _isLoading = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Вы уже проходили этот тест, повторное прохождение недоступно',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    // Блокировка по времени: тест доступен только в интервале [start; start+duration]
+    final now = DateTime.now();
+    final start = activeQuiz.scheduledAt;
+    final end = start != null
+        ? start.add(Duration(minutes: activeQuiz.duration))
+        : null;
+    // Тест доступен только если есть scheduledAt и текущее время в интервале [start, end]
+    final isOpen = start != null &&
+        now.isAfter(start.subtract(const Duration(seconds: 1))) &&
+        end != null &&
+        now.isBefore(end);
+
+    if (!isOpen) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              start != null
+                  ? 'Тест будет доступен с ${start.day.toString().padLeft(2, '0')}.${start.month.toString().padLeft(2, '0')} ${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}'
+                  : 'Тест сейчас недоступен',
+            ),
           ),
         );
       }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка при подключении к квизу: $e')),
-        );
-      }
+      return;
     }
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => QuizSessionScreen(quiz: activeQuiz),
+        ),
+      );
+    }
+  }
+
+  String _getQuizPin(Quiz quiz) {
+    // Simple hash-based PIN generation for quizzes without a stored PIN
+    return (quiz.hashCode.abs() % 10000).toString().padLeft(4, '0');
   }
 
 

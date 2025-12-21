@@ -1,99 +1,82 @@
+import 'dart:convert';
+
 import '../../data/models/quiz_model.dart';
 
+/// Сервис экспорта квизов в разные текстовые форматы.
 class ExportService {
-  /// Экспорт квиза в формате GIFT для Moodle
+  /// Экспорт в формат GIFT (Moodle).
   static String exportToGiftFormat(Quiz quiz) {
-    StringBuffer gift = StringBuffer();
-    
-    gift.writeln("// Quiz: ${quiz.title}");
-    gift.writeln("// Description: ${quiz.description}");
-    gift.writeln("");
-    
-    for (int i = 0; i < quiz.questions.length; i++) {
-      final question = quiz.questions[i];
-      gift.writeln("${question.text} {");
-      
-      if (question.type == QuestionType.singleChoice) {
-        for (final answer in question.answers) {
-          if (answer.isCorrect) {
-            gift.writeln("    =${answer.text}");
-          } else {
-            gift.writeln("    ~${answer.text}");
+    final buffer = StringBuffer();
+
+    for (final question in quiz.questions) {
+      buffer.writeln('::${question.id}:: ${question.text} {');
+
+      switch (question.type) {
+        case QuestionType.singleChoice:
+          for (final answer in question.answers) {
+            final prefix = answer.isCorrect ? '=' : '~';
+            buffer.writeln('$prefix${answer.text}');
           }
-        }
-      } else if (question.type == QuestionType.multipleChoice) {
-        for (final answer in question.answers) {
-          if (answer.isCorrect) {
-            gift.writeln("    =%100%${answer.text}");
-          } else {
-            gift.writeln("    =%0%${answer.text}");
+          break;
+        case QuestionType.multipleChoice:
+          for (final answer in question.answers) {
+            final prefix = answer.isCorrect ? '=' : '~';
+            buffer.writeln('$prefix${answer.text}');
           }
-        }
-      } else if (question.type == QuestionType.textAnswer) {
-        // For text answers, we provide a sample answer
-        final correctAnswer = question.answers.firstWhere(
-          (a) => a.isCorrect, 
-          orElse: () => question.answers.first
-        );
-        gift.writeln("    =${correctAnswer.text}");
+          break;
+        case QuestionType.textAnswer:
+          // Для текстового ответа считаем правильными все варианты с isCorrect = true
+          final correctTexts =
+              question.answers.where((a) => a.isCorrect).map((a) => a.text);
+          for (final text in correctTexts) {
+            buffer.writeln('=${text}');
+          }
+          break;
       }
-      
-      gift.writeln("}");
-      gift.writeln("");
+
+      buffer.writeln('}\n');
     }
-    
-    return gift.toString();
+
+    return buffer.toString();
   }
 
-  /// Экспорт квиза в формате JSON
-  static String exportToJson(Quiz quiz) {
-    return quiz.toJson().toString();
-  }
-
-  /// Экспорт квиза в формате CSV
+  /// Экспорт в CSV: каждая строка — вопрос с вариантами ответов.
   static String exportToCsv(Quiz quiz) {
-    StringBuffer csv = StringBuffer();
-    
-    csv.writeln("Question,Type,Answer,Is Correct");
-    
+    final buffer = StringBuffer();
+    buffer.writeln('question_id,question_text,type,answer_id,answer_text,is_correct,points,topic');
+
     for (final question in quiz.questions) {
       for (final answer in question.answers) {
-        csv.writeln('"${question.text.replaceAll('"', '""')}",'
-                   '"${_getQuestionTypeString(question.type)}",'
-                   '"${answer.text.replaceAll('"', '""')}",'
-                   '"${answer.isCorrect}"');
+        final row = [
+          _escapeCsv(question.id),
+          _escapeCsv(question.text),
+          question.type.index.toString(),
+          _escapeCsv(answer.id),
+          _escapeCsv(answer.text),
+          answer.isCorrect ? '1' : '0',
+          question.points.toString(),
+          _escapeCsv(question.topic ?? ''),
+        ];
+        buffer.writeln(row.join(','));
       }
     }
-    
-    return csv.toString();
+
+    return buffer.toString();
   }
 
-  /// Экспорт статистики квиза в формате CSV
-  static String exportQuizStatsToCsv(Quiz quiz, List<Map<String, dynamic>> results) {
-    StringBuffer csv = StringBuffer();
-    
-    csv.writeln("Student Name,Percentage,Grade,Total Points,Max Points,Completed At");
-    
-    for (final result in results) {
-      csv.writeln('"${result['studentName'].toString().replaceAll('"', '""')}",'
-                 '"${result['percentage']}",'
-                 '"${result['grade']}",'
-                 '"${result['totalPoints']}",'
-                 '"${result['maxPoints']}",'
-                 '"${result['completedAt']}"');
-    }
-    
-    return csv.toString();
+  /// Экспорт в JSON (readable).
+  static String exportToJson(Quiz quiz) {
+    final map = quiz.toJson();
+    return const JsonEncoder.withIndent('  ').convert(map);
   }
 
-  static String _getQuestionTypeString(QuestionType type) {
-    switch (type) {
-      case QuestionType.singleChoice:
-        return "Single Choice";
-      case QuestionType.multipleChoice:
-        return "Multiple Choice";
-      case QuestionType.textAnswer:
-        return "Text Answer";
+  static String _escapeCsv(String value) {
+    final needsQuotes =
+        value.contains(',') || value.contains('"') || value.contains('\n');
+    var escaped = value.replaceAll('"', '""');
+    if (needsQuotes) {
+      escaped = '"$escaped"';
     }
+    return escaped;
   }
 }

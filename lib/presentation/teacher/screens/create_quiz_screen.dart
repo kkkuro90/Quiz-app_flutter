@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-// import 'package:file_picker/file_picker.dart'; // ← УДАЛИТЬ ЭТОТ ИМПОРТ
+import 'package:provider/provider.dart';
 
 import '../../../data/models/quiz_model.dart';
+import '../../../data/repositories/auth_repository.dart';
 
 class CreateQuizScreen extends StatefulWidget {
   final Quiz? quiz;
@@ -22,6 +23,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
 
   List<Question> _questions = [];
   bool _isGenerating = false;
+  DateTime? _scheduledAt;
 
   @override
   void initState() {
@@ -33,6 +35,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       _durationController.text = widget.quiz!.duration.toString();
       _pinController.text = widget.quiz!.pinCode ?? '';
       _questions = widget.quiz!.questions;
+      _scheduledAt = widget.quiz!.scheduledAt;
     }
   }
 
@@ -115,6 +118,9 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
 
   void _saveQuiz() {
     if (_formKey.currentState!.validate() && _questions.isNotEmpty) {
+      final ownerId =
+          context.read<AuthRepository>().currentUser?.id ?? 'unknown-teacher';
+
       final quiz = Quiz(
         id: widget.quiz?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         title: _titleController.text,
@@ -123,6 +129,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
         questions: _questions,
         duration: int.parse(_durationController.text),
         pinCode: _pinController.text.isNotEmpty ? _pinController.text : null,
+        scheduledAt: _scheduledAt,
+        ownerId: ownerId,
       );
 
       Navigator.pop(context, quiz);
@@ -200,6 +208,23 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.schedule),
+                      title: const Text('Время начала квиза'),
+                      subtitle: Text(
+                        _scheduledAt != null
+                            ? '${_formatDate(_scheduledAt!)} • ${_formatTime(_scheduledAt!)}'
+                            : 'Не выбрано',
+                      ),
+                      trailing: TextButton(
+                        onPressed: _pickStartDateTime,
+                        child: Text(
+                          _scheduledAt != null ? 'Изменить' : 'Выбрать',
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -317,6 +342,43 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
         return 'Текстовый ответ';
     }
   }
+
+  Future<void> _pickStartDateTime() async {
+    final now = DateTime.now();
+    final initialDate = _scheduledAt ?? now;
+
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+
+    if (pickedDate == null) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_scheduledAt ?? now),
+    );
+
+    if (pickedTime == null) return;
+
+    setState(() {
+      _scheduledAt = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      );
+    });
+  }
+
+  String _formatDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}';
+
+  String _formatTime(DateTime date) =>
+      '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
 }
 
 class AddQuestionDialog extends StatefulWidget {

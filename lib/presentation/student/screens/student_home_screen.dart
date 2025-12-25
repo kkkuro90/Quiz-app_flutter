@@ -35,22 +35,16 @@ class StudentHomeScreen extends StatelessWidget {
 
             final activeQuizzes =
                 quizRepo.quizzes.where((q) => q.isActive).toList();
-
-            // Ближайшие тесты: показываем только тесты на оценку по времени, которые скоро откроются
             final now = DateTime.now();
             final upcomingQuizzes = quizRepo.quizzes.where((q) {
               if (passedQuizIds.contains(q.id)) return false;
-              // Показываем только тесты на оценку по времени
               if (q.quizType != QuizType.timedTest) return false;
               if (q.scheduledAt == null) return false;
-              // Показываем только тесты, которые еще не закончились
               final start = q.scheduledAt!;
               final end = start.add(Duration(minutes: q.duration));
-              // Показываем тесты, которые еще не закончились
               return now.isBefore(end);
             }).toList()
               ..sort((a, b) {
-                // Сортируем по времени начала (ближайшие первыми)
                 final aStart =
                     a.scheduledAt ?? DateTime.fromMillisecondsSinceEpoch(0);
                 final bStart =
@@ -101,7 +95,6 @@ class StudentHomeScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Предметы только для тестов самостоятельного обучения
                 Builder(
                   builder: (context) {
                     final selfStudySubjects = quizRepo.quizzes
@@ -200,7 +193,6 @@ class StudentHomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   ...availableQuizzes.map((quiz) {
-                    // Окно доступности по времени
                     final now = DateTime.now();
                     final start = quiz.scheduledAt!;
                     final end = start.add(Duration(minutes: quiz.duration));
@@ -208,8 +200,6 @@ class StudentHomeScreen extends StatelessWidget {
                           start.subtract(const Duration(seconds: 1)),
                         ) &&
                         now.isBefore(end);
-
-                    // Текст статуса для ученика
                     String statusText;
                     if (!isOpen) {
                       if (now.isBefore(start)) {
@@ -247,8 +237,6 @@ class StudentHomeScreen extends StatelessWidget {
                             return;
                           }
                         }
-
-                        // Проверяем окно доступности по времени
                         if (!isOpen) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(

@@ -2,9 +2,7 @@ import 'dart:convert';
 
 import '../../data/models/quiz_model.dart';
 
-/// Сервис экспорта квизов в разные текстовые форматы.
 class ExportService {
-  /// Экспорт в формат GIFT (Moodle).
   static String exportToGiftFormat(Quiz quiz) {
     final buffer = StringBuffer();
 
@@ -25,7 +23,6 @@ class ExportService {
           }
           break;
         case QuestionType.textAnswer:
-          // Для текстового ответа считаем правильными все варианты с isCorrect = true
           final correctTexts =
               question.answers.where((a) => a.isCorrect).map((a) => a.text);
           for (final text in correctTexts) {
@@ -40,7 +37,6 @@ class ExportService {
     return buffer.toString();
   }
 
-  /// Экспорт в CSV: каждая строка — вопрос с вариантами ответов.
   static String exportToCsv(Quiz quiz) {
     final buffer = StringBuffer();
     buffer.writeln(
@@ -65,7 +61,6 @@ class ExportService {
     return buffer.toString();
   }
 
-  /// Экспорт в JSON (readable).
   static String exportToJson(Quiz quiz) {
     final map = quiz.toJson();
     return const JsonEncoder.withIndent('  ').convert(map);

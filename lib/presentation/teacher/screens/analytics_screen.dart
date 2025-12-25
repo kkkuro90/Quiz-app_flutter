@@ -132,7 +132,6 @@ class AnalyticsScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-              // Аналитика по вопросам
               if (summary.questionAnalytics.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Card(
@@ -216,7 +215,6 @@ class AnalyticsScreen extends StatelessWidget {
                   ),
                 ),
               ],
-              // Тематическая аналитика
               if (summary.topicPerformance.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Card(

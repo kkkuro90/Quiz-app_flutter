@@ -7,7 +7,6 @@ class QuizSchedulingService {
   QuizSchedulingService({FirebaseFirestore? firestore})
       : _db = firestore ?? FirebaseFirestore.instance;
 
-  /// Schedule a quiz with specific date and time
   Future<void> scheduleQuiz({
     required Quiz quiz,
     required DateTime scheduledAt,
@@ -17,10 +16,9 @@ class QuizSchedulingService {
     });
   }
 
-  /// Update quiz status (not started, in progress, completed)
   Future<void> updateQuizStatus({
     required String quizId,
-    required String status, // 'not_started', 'in_progress', 'completed'
+    required String status,
     String? statusDetails,
   }) async {
     await _db.collection('quizzes').doc(quizId).update({
@@ -30,7 +28,6 @@ class QuizSchedulingService {
     });
   }
 
-  /// Get scheduled quizzes for a specific date range
   Future<List<Quiz>> getScheduledQuizzes({
     required DateTime startDate,
     required DateTime endDate,
@@ -45,7 +42,6 @@ class QuizSchedulingService {
     return snapshot.docs.map((doc) => Quiz.fromJson(doc.data(), doc.id)).toList();
   }
 
-  /// Get quizzes by status
   Future<List<Quiz>> getQuizzesByStatus(String status) async {
     final snapshot = await _db
         .collection('quizzes')
@@ -55,7 +51,6 @@ class QuizSchedulingService {
     return snapshot.docs.map((doc) => Quiz.fromJson(doc.data(), doc.id)).toList();
   }
 
-  /// Set quiz start time and end time
   Future<void> setQuizTiming({
     required String quizId,
     required DateTime startTime,
@@ -67,16 +62,15 @@ class QuizSchedulingService {
     });
   }
 
-  /// Check if quiz is currently active based on scheduled time and duration
   Future<bool> isQuizCurrentlyActive(String quizId) async {
     final doc = await _db.collection('quizzes').doc(quizId).get();
     if (!doc.exists) return false;
 
     final data = doc.data()!;
-    final scheduledAt = data['scheduledAt'] != null 
-        ? DateTime.parse(data['scheduledAt']) 
+    final scheduledAt = data['scheduledAt'] != null
+        ? DateTime.parse(data['scheduledAt'])
         : null;
-    final duration = data['duration'] as int? ?? 30; // Default 30 minutes
+    final duration = data['duration'] as int? ?? 30;
     
     if (scheduledAt == null) return false;
 

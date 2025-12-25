@@ -52,14 +52,11 @@ class QuizAnalyticsScreen extends StatelessWidget {
   }
 
   Widget _buildSummaryCard(BuildContext context, List<QuizResult> results) {
-    // ← ДОБАВЛЕН параметр
     final averageScore =
         results.map((r) => r.percentage).reduce((a, b) => a + b) /
             results.length;
     final bestScore =
         results.map((r) => r.percentage).reduce((a, b) => a > b ? a : b);
-    // final worstScore = // ← ЗАКОММЕНТИРОВАНО, т.к. не используется
-    //     results.map((r) => r.percentage).reduce((a, b) => a < b ? a : b);
 
     return Card(
       child: Padding(
@@ -105,7 +102,6 @@ class QuizAnalyticsScreen extends StatelessWidget {
 
   Widget _buildScoreDistributionChart(
       BuildContext context, List<QuizResult> results) {
-    // ← ДОБАВЛЕН параметр
     final scoreRanges = {
       '0-49%': 0,
       '50-69%': 0,
@@ -162,7 +158,6 @@ class QuizAnalyticsScreen extends StatelessWidget {
   }
 
   Widget _buildResultsList(BuildContext context, List<QuizResult> results) {
-    // ← ДОБАВЛЕН параметр
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),

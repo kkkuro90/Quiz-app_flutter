@@ -111,7 +111,6 @@ class QuizCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                // Quiz icon
                 CircleAvatar(
                   backgroundColor: Colors.blue,
                   radius: 20,
@@ -291,7 +290,6 @@ class QuizCard extends StatelessWidget {
             onPressed: () {
               Navigator.pop(context);
               if (context.mounted) {
-                // Обновляем статус квиза как активный
                 quizRepo.updateQuiz(quiz.copyWith(isActive: true));
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Квиз запущен!')),

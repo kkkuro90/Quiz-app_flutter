@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/colors.dart';
-import '../../../data/models/quiz_model.dart'; // QuizType
+import '../../../data/models/quiz_model.dart';
 import '../../../data/repositories/quiz_repository.dart';
 import '../../shared/widgets/quiz_card.dart';
 import 'quiz_session_screen.dart';
@@ -28,8 +28,6 @@ class _QuizCatalogScreenState extends State<QuizCatalogScreen> {
   @override
   Widget build(BuildContext context) {
     final quizRepo = context.watch<QuizRepository>();
-    
-    // Получаем список всех предметов только для тестов самостоятельного обучения (убираем дубликаты и пробелы)
     final subjects = quizRepo.quizzes
         .where((q) => q.quizType == QuizType.selfStudy)
         .map((q) => q.subject.trim())
@@ -37,30 +35,18 @@ class _QuizCatalogScreenState extends State<QuizCatalogScreen> {
         .toSet()
         .toList()
       ..sort();
-
     final now = DateTime.now();
-    
-    // Фильтрация квизов для самостоятельного обучения
-    // Показываем только тесты типа selfStudy (самостоятельное обучение)
-    // Исключаем тесты, которые закрыты по дедлайну
     var filteredQuizzes = quizRepo.quizzes.where((quiz) {
       final matchesSubject = _selectedSubject == 'all' || quiz.subject.trim() == _selectedSubject;
       final matchesSearch = _searchQuery.isEmpty ||
           quiz.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          quiz.description.toLowerCase().contains(_searchQuery.toLowerCase());
-      
-      // Показываем только тесты для самостоятельного обучения
+              quiz.description.toLowerCase().contains(_searchQuery.toLowerCase());
       if (quiz.quizType != QuizType.selfStudy) return false;
-      
-      // Если тест запланирован (что не должно быть для selfStudy, но на всякий случай),
-      // проверяем, что он еще не закрыт по дедлайну
       if (quiz.scheduledAt != null) {
         final start = quiz.scheduledAt!;
         final end = start.add(Duration(minutes: quiz.duration));
-        // Если тест уже закончился, не показываем его
         if (now.isAfter(end)) return false;
       }
-      
       return matchesSubject && matchesSearch;
     }).toList();
 
@@ -72,7 +58,6 @@ class _QuizCatalogScreenState extends State<QuizCatalogScreen> {
         color: AppColors.background,
         child: Column(
           children: [
-            // Поиск
             Padding(
               padding: const EdgeInsets.all(16),
               child: TextField(
@@ -90,7 +75,6 @@ class _QuizCatalogScreenState extends State<QuizCatalogScreen> {
                 },
               ),
             ),
-            // Фильтр по предметам
             if (subjects.isNotEmpty)
               SizedBox(
                 height: 50,
@@ -107,7 +91,6 @@ class _QuizCatalogScreenState extends State<QuizCatalogScreen> {
                   ],
                 ),
               ),
-            // Список тестов
             Expanded(
               child: filteredQuizzes.isEmpty
                   ? Center(
@@ -167,4 +150,3 @@ class _QuizCatalogScreenState extends State<QuizCatalogScreen> {
     );
   }
 }
-

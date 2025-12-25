@@ -18,7 +18,6 @@ class MainApp extends StatelessWidget {
       body: GradientBackground(
         child: Column(
           children: [
-            // Header
             Container(
               padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
               decoration: const BoxDecoration(
@@ -69,7 +68,6 @@ class MainApp extends StatelessWidget {
                 ],
               ),
             ),
-            // Content - показываем только нужную страницу
             Expanded(
               child: userRole == 'teacher'
                   ? const TeacherHomeScreen()

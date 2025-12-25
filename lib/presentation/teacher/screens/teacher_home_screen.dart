@@ -61,7 +61,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
               padding: const EdgeInsets.all(20),
               children: [
                 const SizedBox(height: 20),
-                // Кнопка создания квиза
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -85,7 +84,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                // Кнопка аналитики
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
@@ -104,7 +102,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                     ),
                   ),
                 ),
-                // Активные квизы
                 if (activeQuizzes.isNotEmpty) ...[
                   const SizedBox(height: 32),
                   Text(
@@ -125,7 +122,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                           quiz.isActive
                               ? OutlinedButton(
                                   onPressed: () {
-                                    // Остановить квиз
                                     quizRepo.updateQuiz(
                                         quiz.copyWith(isActive: false));
                                   },
@@ -133,7 +129,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                                 )
                               : ElevatedButton(
                                   onPressed: () {
-                                    // Активировать квиз
                                     quizRepo.updateQuiz(
                                         quiz.copyWith(isActive: true));
                                   },
@@ -313,7 +308,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
     List<ScheduleItem> schedule,
     TeacherDashboardController controller,
   ) {
-    // Get all schedule items within the next week, not just quizzes
     final now = DateTime.now();
     final nextWeek = now.add(const Duration(days: 7));
     final upcomingSchedule = controller.schedule
@@ -523,7 +517,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
             ),
             const SizedBox(height: 12),
             SizedBox(
-              // По высоте вмещается примерно 3 элемента, остальные доступны по прокрутке
               height: 200,
               child: ListView.builder(
                 itemCount: myQuizzes.length,
@@ -853,7 +846,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
   }
 
   String _getQuizPin(Quiz quiz) {
-    // Возвращаем PIN из квиза, если он есть, иначе генерируем на основе ID (резервный вариант)
     return quiz.pinCode ??
         (quiz.id.hashCode % 10000).toString().padLeft(4, '0');
   }

@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
-/// Repository для управления настройками оценок
 class GradeSettingsRepository with ChangeNotifier {
   final FirebaseFirestore _db;
 
@@ -14,11 +13,8 @@ class GradeSettingsRepository with ChangeNotifier {
   }
 
   void _listenToSettings() {
-    // Отслеживаем изменения настроек для текущего учителя
-    // Этот метод будет вызван при изменении teacherId
   }
 
-  /// Обновляем текущего учителя и загружаем его настройки
   void setCurrentTeacher(String teacherId) {
     if (_currentTeacherId == teacherId) return;
     
@@ -26,14 +22,12 @@ class GradeSettingsRepository with ChangeNotifier {
     _loadSettings(teacherId);
   }
 
-  /// Загружаем настройки для указанного учителя
   Future<void> _loadSettings(String teacherId) async {
     try {
       final doc = await _db.collection('grade_settings').doc(teacherId).get();
       if (doc.exists) {
         _settings = _parseThresholds(doc.data() as Map<String, dynamic>);
       } else {
-        // Используем значения по умолчанию
         _settings = {
           '5': 0.85,
           '4': 0.70,
@@ -43,7 +37,6 @@ class GradeSettingsRepository with ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      // Используем значения по умолчанию в случае ошибки
       _settings = {
         '5': 0.85,
         '4': 0.70,
@@ -54,7 +47,6 @@ class GradeSettingsRepository with ChangeNotifier {
     }
   }
 
-  /// Сохраняем настройки оценок
   Future<void> saveSettings(Map<String, double> thresholds) async {
     if (_currentTeacherId == null) {
       throw Exception('Teacher ID is not set. Call setCurrentTeacher first.');
@@ -71,13 +63,11 @@ class GradeSettingsRepository with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Получаем текущие настройки оценок
   Map<String, double> get currentSettings {
     if (_settings != null) {
       return Map.unmodifiable(_settings!);
     }
     
-    // Значения по умолчанию
     return {
       '5': 0.85,
       '4': 0.70,
@@ -86,7 +76,6 @@ class GradeSettingsRepository with ChangeNotifier {
     };
   }
 
-  /// Расчет оценки по проценту
   String calculateGrade(double percentage) {
     final thresholds = currentSettings;
     if (percentage >= thresholds['5']!) return '5';

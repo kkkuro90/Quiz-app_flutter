@@ -24,7 +24,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   List<Question> _questions = [];
   bool _isGenerating = false;
   DateTime? _scheduledAt;
-  QuizType _quizType = QuizType.timedTest; // По умолчанию тест на оценку
+  QuizType _quizType = QuizType.timedTest;
 
   @override
   void initState() {
@@ -42,12 +42,9 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   }
 
   Future<void> _pickFile() async {
-    // Временная заглушка вместо file_picker
     setState(() {
       _isGenerating = true;
     });
-
-    // Имитация выбора файла и генерации вопросов
     await Future.delayed(const Duration(seconds: 2));
 
     setState(() {
@@ -73,38 +70,6 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     }
   }
 
-  /*
-  Future<void> _generateQuestionsFromFile() async {
-    // Упрощенная версия без file_picker
-    setState(() {
-      _isGenerating = true;
-    });
-
-    await Future.delayed(const Duration(seconds: 3));
-
-    setState(() {
-      _questions.addAll([
-        Question(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          text: 'Демонстрационный вопрос из файла',
-          type: QuestionType.singleChoice,
-          answers: [
-            Answer(id: '1', text: 'Правильный ответ', isCorrect: true),
-            Answer(id: '2', text: 'Неправильный ответ 1', isCorrect: false),
-            Answer(id: '3', text: 'Неправильный ответ 2', isCorrect: false),
-          ],
-        ),
-      ]);
-      _isGenerating = false;
-    });
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Вопросы сгенерированы успешно!')),
-      );
-    }
-  }
-    */
   void _addQuestion() {
     showDialog(
       context: context,
@@ -141,8 +106,6 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
           context.read<AuthRepository>().currentUser?.id ?? 'unknown-teacher';
 
       final duration = int.tryParse(_durationController.text) ?? 30;
-
-      // Для самостоятельного обучения не требуется время начала и PIN-код
       final pinCode = _quizType == QuizType.timedTest &&
               _pinController.text.trim().isNotEmpty
           ? _pinController.text.trim()
@@ -150,8 +113,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       final scheduledAt = _quizType == QuizType.timedTest ? _scheduledAt : null;
       final isActive = _quizType == QuizType.timedTest
           ? false
-          : false; // Самостоятельное обучение не активируется
-
+          : false;
       final quiz = widget.quiz != null
           ? widget.quiz!.copyWith(
               title: _titleController.text.trim(),
@@ -259,7 +221,6 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    // Выбор типа квиза
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
@@ -292,7 +253,6 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                               onChanged: (value) {
                                 setState(() {
                                   _quizType = value!;
-                                  // Для самостоятельного обучения убираем время начала
                                   if (value == QuizType.selfStudy) {
                                     _scheduledAt = null;
                                   }
@@ -303,7 +263,6 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                         ),
                       ),
                     ),
-                    // Время начала квиза (только для тестов на оценку)
                     if (_quizType == QuizType.timedTest) ...[
                       const SizedBox(height: 16),
                       ListTile(
@@ -323,7 +282,6 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                         ),
                       ),
                     ],
-                    // PIN-код только для тестов на оценку
                     if (_quizType == QuizType.timedTest) ...[
                       const SizedBox(height: 16),
                       TextFormField(
@@ -336,8 +294,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                         ),
                         keyboardType: TextInputType.number,
                         maxLength: 4,
-                        enabled: widget.quiz?.isActive !=
-                            true, // Disable if quiz is already active
+                        enabled: widget.quiz?.isActive != true,
                       ),
                     ],
                     if (widget.quiz?.pinCode != null)
@@ -618,7 +575,6 @@ class _AddQuestionDialogState extends State<AddQuestionDialog> {
               ),
             ),
             const SizedBox(height: 16),
-            // Показываем поля для правильных текстовых ответов только для текстовых вопросов
             if (_selectedType == QuestionType.textAnswer) ...[
               const Text(
                 'Правильные варианты ответов:',
@@ -657,7 +613,6 @@ class _AddQuestionDialogState extends State<AddQuestionDialog> {
               ),
               const SizedBox(height: 16),
             ] else ...[
-              // Показываем варианты ответов для single/multiple choice
               ..._answers.asMap().entries.map((entry) {
                 final index = entry.key;
                 final answer = entry.value;
@@ -692,7 +647,6 @@ class _AddQuestionDialogState extends State<AddQuestionDialog> {
                               });
                             }
                           : (value) {
-                              // Для single choice снимаем выделение с других
                               setState(() {
                                 for (int i = 0; i < _answers.length; i++) {
                                   _answers[i] = Answer(

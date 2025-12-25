@@ -19,9 +19,8 @@ class QuizSessionScreen extends StatefulWidget {
 class _QuizSessionScreenState extends State<QuizSessionScreen> {
   int _currentQuestionIndex = 0;
   final Map<int, List<String>> _selectedAnswers = {};
-  final Map<int, String> _textAnswers = {}; // Для текстовых ответов
-  final Map<int, TextEditingController> _textAnswerControllers =
-      {}; // Контроллеры для текстовых ответов
+  final Map<int, String> _textAnswers = {};
+  final Map<int, TextEditingController> _textAnswerControllers = {};
   final Map<int, DateTime> _questionStartTimes = {};
   int _remainingTime = 0;
   late Timer _timer;
@@ -30,23 +29,15 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
   @override
   void initState() {
     super.initState();
-    _realTimeService =
-        RealTimeQuizService(); // Keep it in case we need it later
-
-    // Для тестов самостоятельного обучения нет ограничения по времени
+    _realTimeService = RealTimeQuizService();
     if (widget.quiz.quizType == QuizType.selfStudy) {
-      _remainingTime = -1; // -1 означает, что таймер не активен
+      _remainingTime = -1;
     } else {
       _remainingTime = widget.quiz.duration * 60;
-      // Just use local timer for now, avoid server-side timing issues
       _startLocalTimer();
     }
-
-    // Record start time for the first question
     _recordQuestionStartTime(0);
   }
-
-  /// Start local countdown timer only
   void _startLocalTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingTime > 0) {
@@ -58,13 +49,9 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
       }
     });
   }
-
-  /// Record the start time for a question
   void _recordQuestionStartTime(int questionIndex) {
     _questionStartTimes[questionIndex] = DateTime.now();
   }
-
-  /// Calculate time spent on a question
   Duration? _getTimeSpentOnQuestion(int questionIndex) {
     if (_questionStartTimes.containsKey(questionIndex)) {
       return DateTime.now().difference(_questionStartTimes[questionIndex]!);
@@ -78,14 +65,10 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
       _timer.cancel();
     }
     _realTimeService.dispose();
-
-    // Dispose text answer controllers
     for (var controller in _textAnswerControllers.values) {
       controller.dispose();
     }
     _textAnswerControllers.clear();
-
-    // Update quiz status when quiz is left
     _realTimeService.updateQuizStatus(
       quizId: widget.quiz.id,
       status: _currentQuestionIndex >= widget.quiz.questions.length - 1
@@ -137,8 +120,6 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
       setState(() {
         _currentQuestionIndex++;
       });
-
-      // Record the start time for this question (just moved to)
       _recordQuestionStartTime(_currentQuestionIndex);
     }
   }
@@ -148,8 +129,6 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
       setState(() {
         _currentQuestionIndex--;
       });
-
-      // Record the start time for this question (just moved to)
       _recordQuestionStartTime(_currentQuestionIndex);
     }
   }
@@ -198,7 +177,6 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
         studentTextAnswer = textAnswer?.trim() ?? '';
         if (studentTextAnswer.isNotEmpty &&
             question.correctTextAnswers != null) {
-          // Сравниваем ответ ученика с правильными вариантами (без учета регистра)
           final studentAnswerLower = studentTextAnswer.toLowerCase();
           final isAnswerCorrect = question.correctTextAnswers!.any(
             (correctAnswer) =>
@@ -226,8 +204,6 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
     }
 
     final percentage = maxPoints > 0 ? totalPoints / maxPoints : 0.0;
-
-    // Сохраняем результат в репозиторий (бэкенд)
     final authRepo = context.read<AuthRepository>();
     final quizRepo = context.read<QuizRepository>();
     final student = authRepo.currentUser;
@@ -259,10 +235,7 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
       );
     }
 
-    // Сохраняем результат в репозиторий (и далее в Firestore)
     quizRepo.addResult(result);
-
-    // Показываем диалог с результатом
     if (context.mounted) {
       showDialog(
         context: context,
@@ -273,9 +246,9 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
           percentage: percentage,
           onClose: () {
             if (context.mounted) {
-              Navigator.pop(context); // Закрываем диалог
+              Navigator.pop(context);
               if (context.mounted) {
-                Navigator.pop(context); // Закрываем QuizSessionScreen
+                Navigator.pop(context);
               }
             }
           },
@@ -288,9 +261,7 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
   Widget build(BuildContext context) {
     final currentQuestion = widget.quiz.questions[_currentQuestionIndex];
     final selectedAnswers = _selectedAnswers[_currentQuestionIndex] ?? [];
-    String? selectedSingleAnswer; // ← ДОБАВЛЕНО для RadioGroup
-
-    // Check if this is the first time viewing this question
+    String? selectedSingleAnswer;
     if (!_questionStartTimes.containsKey(_currentQuestionIndex)) {
       _recordQuestionStartTime(_currentQuestionIndex);
     }
@@ -304,7 +275,6 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
       appBar: AppBar(
         title: Text(widget.quiz.title),
         actions: [
-          // Таймер только для тестов на оценку
           if (widget.quiz.quizType == QuizType.timedTest && _remainingTime >= 0)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -361,25 +331,21 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
                     ),
                     const SizedBox(height: 24),
                     if (currentQuestion.type == QuestionType.singleChoice) ...[
-                      // НОВЫЙ СПОСОБ для single choice с RadioGroup
                       ...currentQuestion.answers.map((answer) {
                         return _buildRadioAnswerOption(
                             answer, selectedSingleAnswer == answer.id);
                       }),
                     ] else if (currentQuestion.type ==
                         QuestionType.multipleChoice) ...[
-                      // Старый способ для multiple choice
                       ...currentQuestion.answers.map((answer) {
                         return _buildCheckboxAnswerOption(
                             answer, selectedAnswers.contains(answer.id));
                       }),
                     ] else if (currentQuestion.type ==
                         QuestionType.textAnswer) ...[
-                      // Текстовый ответ
                       const SizedBox(height: 16),
                       Builder(
                         builder: (context) {
-                          // Получаем или создаем контроллер для текущего вопроса
                           if (!_textAnswerControllers
                               .containsKey(_currentQuestionIndex)) {
                             _textAnswerControllers[_currentQuestionIndex] =
@@ -439,8 +405,6 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
       ),
     );
   }
-
-  // НОВЫЙ МЕТОД для Radio (single choice)
   Widget _buildRadioAnswerOption(Answer answer, bool isSelected) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -449,17 +413,13 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
         title: Text(answer.text),
         leading: Radio<String>(
           value: answer.id,
-          // ignore: deprecated_member_use
           groupValue: isSelected ? answer.id : null,
-          // ignore: deprecated_member_use
           onChanged: (value) => _selectAnswer(answer.id),
         ),
         onTap: () => _selectAnswer(answer.id),
       ),
     );
   }
-
-  // НОВЫЙ МЕТОД для Checkbox (multiple choice)
   Widget _buildCheckboxAnswerOption(Answer answer, bool isSelected) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -537,7 +497,7 @@ class QuizResultDialog extends StatelessWidget {
           Text('$totalPoints/$maxPoints баллов'),
           const SizedBox(height: 16),
           LinearProgressIndicator(
-            value: percentage.toDouble(), // ← ИСПРАВЛЕНО: явное преобразование
+            value: percentage.toDouble(),
             backgroundColor: Colors.grey[300],
             color: gradeColor,
           ),

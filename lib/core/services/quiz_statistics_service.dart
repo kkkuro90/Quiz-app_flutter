@@ -8,15 +8,12 @@ class QuizStatisticsService {
   QuizStatisticsService({FirebaseFirestore? firestore})
       : _db = firestore ?? FirebaseFirestore.instance;
 
-  /// Save detailed statistics for a quiz result
   Future<void> saveDetailedStatistics({
     required QuizResult result,
     required Quiz quiz,
   }) async {
-    // Calculate detailed statistics
     final detailedStats = _calculateDetailedStatistics(result, quiz);
     
-    // Save to Firestore
     await _db.collection('quiz_statistics').doc(result.id).set({
       'quizId': result.quizId,
       'studentId': result.studentId,
@@ -26,18 +23,15 @@ class QuizStatisticsService {
     });
   }
 
-  /// Calculate detailed statistics from quiz result and quiz
   Map<String, dynamic> _calculateDetailedStatistics(QuizResult result, Quiz quiz) {
     final stats = <String, dynamic>{};
     
-    // Overall quiz statistics
     stats['totalQuestions'] = quiz.questions.length;
     stats['answeredQuestions'] = result.answers.length;
     stats['correctAnswers'] = result.answers.where((a) => a.isCorrect).length;
     stats['incorrectAnswers'] = result.answers.where((a) => !a.isCorrect).length;
     stats['percentage'] = result.percentage;
     
-    // Per-question statistics
     final questionStats = <String, dynamic>{};
     for (int i = 0; i < quiz.questions.length; i++) {
       final question = quiz.questions[i];
@@ -68,7 +62,6 @@ class QuizStatisticsService {
     
     stats['questionStats'] = questionStats;
     
-    // Answer distribution statistics
     final answerDistribution = <String, dynamic>{};
     for (final question in quiz.questions) {
       final answersForQuestion = result.answers
@@ -87,13 +80,11 @@ class QuizStatisticsService {
     
     stats['answerDistribution'] = answerDistribution;
     
-    // Performance by difficulty
     final easyCorrect = <String, int>{};
     final mediumCorrect = <String, int>{};
     final hardCorrect = <String, int>{};
     
     for (final question in quiz.questions) {
-      // Determine difficulty based on points (simple heuristic)
       final difficulty = _getDifficultyLevel(question.points);
       final isCorrect = result.answers
           .where((a) => a.questionId == question.id)
@@ -140,7 +131,6 @@ class QuizStatisticsService {
     return 'hard';
   }
 
-  /// Get statistics for a specific quiz
   Future<Map<String, dynamic>> getQuizStatistics(String quizId) async {
     final snapshot = await _db
         .collection('quiz_statistics')
@@ -150,18 +140,15 @@ class QuizStatisticsService {
     if (snapshot.docs.isEmpty) {
       return {'error': 'No statistics found for this quiz'};
     }
-
     final statsList = snapshot.docs.map((doc) => doc.data()).toList();
     return _aggregateStatistics(statsList);
   }
 
-  /// Aggregate statistics from multiple results
   Map<String, dynamic> _aggregateStatistics(List<Map<String, dynamic>> allStats) {
     if (allStats.isEmpty) return {};
 
     final aggregated = <String, dynamic>{};
     
-    // Calculate overall averages
     final percentages = allStats
         .map((stat) => stat['detailedStats']['percentage'] as double)
         .toList();
@@ -170,12 +157,10 @@ class QuizStatisticsService {
     aggregated['totalResults'] = allStats.length;
     aggregated['passRate'] = percentages.where((p) => p >= 0.5).length / percentages.length;
     
-    // Get first entry to access question structure
     if (allStats.isNotEmpty) {
       final firstDetailed = allStats.first['detailedStats'];
       aggregated['totalQuestions'] = firstDetailed['totalQuestions'];
       
-      // Calculate question-level statistics
       final questionIds = firstDetailed['questionStats'].keys.toList();
       final questionPerformance = <String, dynamic>{};
       
@@ -198,7 +183,6 @@ class QuizStatisticsService {
     return aggregated;
   }
 
-  /// Get individual student's statistics
   Future<Map<String, dynamic>> getStudentStatistics(String studentId) async {
     final snapshot = await _db
         .collection('quiz_statistics')
@@ -213,7 +197,6 @@ class QuizStatisticsService {
     return _aggregateStudentStatistics(statsList, studentId);
   }
 
-  /// Aggregate statistics for a specific student
   Map<String, dynamic> _aggregateStudentStatistics(List<Map<String, dynamic>> allStats, String studentId) {
     final aggregated = <String, dynamic>{};
     

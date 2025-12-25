@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 
-/// AuthRepository: обертка над Firebase Auth (email/password)
 class AuthRepository with ChangeNotifier {
   final fb.FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
@@ -38,7 +37,6 @@ class AuthRepository with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Загружает пользователя из Firestore, если есть, иначе из Firebase Auth
   Future<User> _loadUserFromFirestore(fb.User fbUser) async {
     try {
       final userDoc = await _firestore.collection('users').doc(fbUser.uid).get();
@@ -56,7 +54,6 @@ class AuthRepository with ChangeNotifier {
     } catch (e) {
       debugPrint('Ошибка загрузки пользователя из Firestore: $e');
     }
-    // Fallback на старый способ через displayName
     return _userFromFirebase(fbUser);
   }
 
@@ -88,18 +85,15 @@ class AuthRepository with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Проверка тестовых пользователей (для демо без базы данных)
       final testUser = _checkTestUser(email, password);
       if (testUser != null) {
-        await Future.delayed(const Duration(milliseconds: 500)); // Имитация задержки
+        await Future.delayed(const Duration(milliseconds: 500));
         _currentUser = testUser;
         _isAuthenticated = true;
         _isLoading = false;
         notifyListeners();
         return;
       }
-
-      // Обычный вход через Firebase
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -117,7 +111,6 @@ class AuthRepository with ChangeNotifier {
   }
 
   User? _checkTestUser(String email, String password) {
-    // Тестовый учитель
     if (email.toLowerCase() == 'teacher' && password == '123qwe') {
       return User(
         id: 'test-teacher-001',
@@ -128,8 +121,6 @@ class AuthRepository with ChangeNotifier {
         updatedAt: DateTime.now(),
       );
     }
-    
-    // Тестовый ученик
     if (email.toLowerCase() == 'child' && password == '123456') {
       return User(
         id: 'test-student-001',
@@ -153,18 +144,15 @@ class AuthRepository with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Проверка тестовых пользователей (для демо без базы данных)
       final testUser = _checkTestUser(email, password);
       if (testUser != null) {
-        await Future.delayed(const Duration(milliseconds: 500)); // Имитация задержки
+        await Future.delayed(const Duration(milliseconds: 500));
         _currentUser = testUser;
         _isAuthenticated = true;
         _isLoading = false;
         notifyListeners();
         return;
       }
-
-      // Обычная регистрация через Firebase
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -172,17 +160,15 @@ class AuthRepository with ChangeNotifier {
       
       final fbUser = credential.user!;
       
-      // Сохраняем роль в Firestore
       await _firestore.collection('users').doc(fbUser.uid).set({
         'userId': fbUser.uid,
         'email': email,
         'role': role,
-        'name': email.split('@')[0], // Имя по умолчанию из email
+        'name': email.split('@')[0],
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
       
-      // Также сохраняем в displayName для обратной совместимости
       await fbUser.updateDisplayName('$email [$role]');
       
       _currentUser = await _loadUserFromFirestore(fbUser);

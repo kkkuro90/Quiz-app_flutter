@@ -85,7 +85,6 @@ class _QuizDetailsScreenState extends State<QuizDetailsScreen> {
                 TextButton(
                   onPressed: () async {
                     if (_isEditing) {
-                      // Сохранить изменения, включая время начала и длительность
                       final updated = _quiz.copyWith(
                         title: _titleController.text,
                         description: _descriptionController.text,

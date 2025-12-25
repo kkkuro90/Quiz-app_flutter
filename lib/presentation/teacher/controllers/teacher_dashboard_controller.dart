@@ -153,7 +153,6 @@ class TeacherDashboardController extends ChangeNotifier {
   }
 
   void _updateSchedule() {
-    // Объединяем автоматически генерируемые события с вручную добавленными
     final autoSchedule = _buildSchedule();
     _schedule = [...autoSchedule, ..._manualScheduleItems];
     _schedule.sort((a, b) => a.date.compareTo(b.date));
@@ -223,8 +222,6 @@ class TeacherDashboardController extends ChangeNotifier {
   }
 
   List<StudyMaterial> _buildMaterials() {
-    // Материалы теперь динамические - добавляются через addStudyMaterial
-    // или могут быть загружены из базы данных
     return [];
   }
 
@@ -327,10 +324,8 @@ class TeacherDashboardController extends ChangeNotifier {
       }
     }
 
-    // Аналитика по вопросам
     final questionAnalytics = _buildQuestionAnalytics(results, quizzesById);
     
-    // Тематическая аналитика
     final topicPerformance = _buildTopicAnalytics(results, quizzesById);
 
     return QuizAnalyticsSummary(
@@ -373,13 +368,11 @@ class TeacherDashboardController extends ChangeNotifier {
           stats.correctAttempts++;
         }
 
-        // Время, затраченное на ответ
         if (answer.timeSpent != null) {
           stats.totalTimeSeconds += answer.timeSpent!.inSeconds;
           stats.timeCount++;
         }
 
-        // Распределение выбранных вариантов
         for (final selectedId in answer.selectedAnswers) {
           stats.answerDistribution[selectedId] =
               (stats.answerDistribution[selectedId] ?? 0) + 1;

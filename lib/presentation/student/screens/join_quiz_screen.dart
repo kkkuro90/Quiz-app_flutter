@@ -29,8 +29,6 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
     setState(() {
       _isLoading = true;
     });
-
-    // Поиск активного квиза по PIN-коду
     final quizRepo = context.read<QuizRepository>();
     final authRepo = context.read<AuthRepository>();
     final student = authRepo.currentUser;
@@ -60,8 +58,6 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
       }
       return;
     }
-
-    // Проверяем, проходил ли студент этот квиз ранее
     if (student != null) {
       final results = await quizRepo.getStudentResultsWithSort(student.id);
       final alreadyPassed = results.any((r) => r.quizId == activeQuiz.id);
@@ -81,22 +77,14 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
         return;
       }
     }
-
-    // Блокировка по времени: тест доступен только если:
-    // 1. Квиз активен И имеет PIN-код
-    // 2. Если квиз запланирован (scheduledAt), то текущее время должно быть в интервале [start, end]
-    // 3. Если квиз не запланирован, но активен и имеет PIN - доступен сразу
     final now = DateTime.now();
     final start = activeQuiz.scheduledAt;
     bool isOpen = false;
-
     if (start != null) {
-      // Квиз запланирован - проверяем время
       final end = start.add(Duration(minutes: activeQuiz.duration));
       isOpen = now.isAfter(start.subtract(const Duration(seconds: 1))) &&
           now.isBefore(end);
     } else {
-      // Квиз не запланирован - доступен если активен и имеет PIN
       isOpen = activeQuiz.isActive && activeQuiz.pinCode != null;
     }
 
@@ -133,7 +121,6 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
   }
 
   String _getQuizPin(Quiz quiz) {
-    // Simple hash-based PIN generation for quizzes without a stored PIN
     return (quiz.hashCode.abs() % 10000).toString().padLeft(4, '0');
   }
 

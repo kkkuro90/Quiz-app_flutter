@@ -43,7 +43,8 @@ class ExportService {
   /// Экспорт в CSV: каждая строка — вопрос с вариантами ответов.
   static String exportToCsv(Quiz quiz) {
     final buffer = StringBuffer();
-    buffer.writeln('question_id,question_text,type,answer_id,answer_text,is_correct,points,topic');
+    buffer.writeln(
+        'question_id,question_text,type,answer_id,answer_text,is_correct,points,topic');
 
     for (final question in quiz.questions) {
       for (final answer in question.answers) {
@@ -80,8 +81,3 @@ class ExportService {
     return escaped;
   }
 }
-<<<<<<< HEAD
-=======
-
-
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935

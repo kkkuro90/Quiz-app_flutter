@@ -24,10 +24,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   List<Question> _questions = [];
   bool _isGenerating = false;
   DateTime? _scheduledAt;
-<<<<<<< HEAD
   QuizType _quizType = QuizType.timedTest; // По умолчанию тест на оценку
-=======
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
 
   @override
   void initState() {
@@ -38,14 +35,9 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       _subjectController.text = widget.quiz!.subject;
       _durationController.text = widget.quiz!.duration.toString();
       _pinController.text = widget.quiz!.pinCode ?? '';
-<<<<<<< HEAD
       _questions = List.from(widget.quiz!.questions);
       _scheduledAt = widget.quiz!.scheduledAt;
       _quizType = widget.quiz!.quizType;
-=======
-      _questions = widget.quiz!.questions;
-      _scheduledAt = widget.quiz!.scheduledAt;
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
     }
   }
 
@@ -127,28 +119,12 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   }
 
   void _saveQuiz() {
-<<<<<<< HEAD
     if (!mounted) return;
-    
+
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Пожалуйста, заполните все обязательные поля')),
-=======
-    if (_formKey.currentState!.validate() && _questions.isNotEmpty) {
-      final ownerId =
-          context.read<AuthRepository>().currentUser?.id ?? 'unknown-teacher';
-
-      final quiz = Quiz(
-        id: widget.quiz?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-        title: _titleController.text,
-        description: _descriptionController.text,
-        subject: _subjectController.text,
-        questions: _questions,
-        duration: int.parse(_durationController.text),
-        pinCode: _pinController.text.isNotEmpty ? _pinController.text : null,
-        scheduledAt: _scheduledAt,
-        ownerId: ownerId,
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
+        const SnackBar(
+            content: Text('Пожалуйста, заполните все обязательные поля')),
       );
       return;
     }
@@ -165,14 +141,17 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
           context.read<AuthRepository>().currentUser?.id ?? 'unknown-teacher';
 
       final duration = int.tryParse(_durationController.text) ?? 30;
-      
+
       // Для самостоятельного обучения не требуется время начала и PIN-код
-      final pinCode = _quizType == QuizType.timedTest && _pinController.text.trim().isNotEmpty
+      final pinCode = _quizType == QuizType.timedTest &&
+              _pinController.text.trim().isNotEmpty
           ? _pinController.text.trim()
           : null;
       final scheduledAt = _quizType == QuizType.timedTest ? _scheduledAt : null;
-      final isActive = _quizType == QuizType.timedTest ? false : false; // Самостоятельное обучение не активируется
-      
+      final isActive = _quizType == QuizType.timedTest
+          ? false
+          : false; // Самостоятельное обучение не активируется
+
       final quiz = widget.quiz != null
           ? widget.quiz!.copyWith(
               title: _titleController.text.trim(),
@@ -280,7 +259,6 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-<<<<<<< HEAD
                     // Выбор типа квиза
                     Card(
                       child: Padding(
@@ -295,7 +273,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                             const SizedBox(height: 12),
                             RadioListTile<QuizType>(
                               title: const Text('Тест на оценку по времени'),
-                              subtitle: const Text('Тест с ограничением по времени, доступен в определенное время'),
+                              subtitle: const Text(
+                                  'Тест с ограничением по времени, доступен в определенное время'),
                               value: QuizType.timedTest,
                               groupValue: _quizType,
                               onChanged: (value) {
@@ -306,7 +285,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                             ),
                             RadioListTile<QuizType>(
                               title: const Text('Самостоятельное обучение'),
-                              subtitle: const Text('Всегда доступен для прохождения, без ограничений по времени'),
+                              subtitle: const Text(
+                                  'Всегда доступен для прохождения, без ограничений по времени'),
                               value: QuizType.selfStudy,
                               groupValue: _quizType,
                               onChanged: (value) {
@@ -321,32 +301,6 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                             ),
                           ],
                         ),
-=======
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.schedule),
-                      title: const Text('Время начала квиза'),
-                      subtitle: Text(
-                        _scheduledAt != null
-                            ? '${_formatDate(_scheduledAt!)} • ${_formatTime(_scheduledAt!)}'
-                            : 'Не выбрано',
-                      ),
-                      trailing: TextButton(
-                        onPressed: _pickStartDateTime,
-                        child: Text(
-                          _scheduledAt != null ? 'Изменить' : 'Выбрать',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _pinController,
-                      decoration: const InputDecoration(
-                        labelText: 'PIN-код (для подключения учеников)',
-                        hintText: 'Введите 4-значный PIN',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.pin),
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
                       ),
                     ),
                     // Время начала квиза (только для тестов на оценку)
@@ -382,7 +336,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                         ),
                         keyboardType: TextInputType.number,
                         maxLength: 4,
-                        enabled: widget.quiz?.isActive != true, // Disable if quiz is already active
+                        enabled: widget.quiz?.isActive !=
+                            true, // Disable if quiz is already active
                       ),
                     ],
                     if (widget.quiz?.pinCode != null)
@@ -390,17 +345,20 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                         padding: const EdgeInsets.only(top: 8),
                         child: Row(
                           children: [
-                            const Icon(Icons.info, size: 16, color: Colors.blue),
+                            const Icon(Icons.info,
+                                size: 16, color: Colors.blue),
                             const SizedBox(width: 4),
                             Text(
                               'PIN: ${widget.quiz!.pinCode}',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(width: 8),
                             if (widget.quiz?.pinExpiresAt != null)
                               Text(
                                 'Срок действия: ${widget.quiz!.pinExpiresAt!.toString().substring(0, 16)}',
-                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.grey),
                               ),
                           ],
                         ),
@@ -490,11 +448,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   }
 
   Future<void> _pickStartDateTime() async {
-<<<<<<< HEAD
     if (!mounted) return;
-    
-=======
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
+
     final now = DateTime.now();
     final initialDate = _scheduledAt ?? now;
 
@@ -506,10 +461,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     );
 
     if (pickedDate == null) return;
-<<<<<<< HEAD
     if (!mounted) return;
-=======
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
 
     final pickedTime = await showTimePicker(
       context: context,
@@ -517,7 +469,6 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     );
 
     if (pickedTime == null) return;
-<<<<<<< HEAD
     if (!mounted) return;
 
     final newScheduledAt = DateTime(
@@ -533,18 +484,6 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
         _scheduledAt = newScheduledAt;
       });
     }
-=======
-
-    setState(() {
-      _scheduledAt = DateTime(
-        pickedDate.year,
-        pickedDate.month,
-        pickedDate.day,
-        pickedTime.hour,
-        pickedTime.minute,
-      );
-    });
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
   }
 
   String _formatDate(DateTime date) =>
@@ -624,7 +563,8 @@ class _AddQuestionDialogState extends State<AddQuestionDialog> {
           .toList();
       if (correctTextAnswers.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Добавьте хотя бы один правильный вариант ответа')),
+          const SnackBar(
+              content: Text('Добавьте хотя бы один правильный вариант ответа')),
         );
         return;
       }
@@ -719,63 +659,63 @@ class _AddQuestionDialogState extends State<AddQuestionDialog> {
             ] else ...[
               // Показываем варианты ответов для single/multiple choice
               ..._answers.asMap().entries.map((entry) {
-              final index = entry.key;
-              final answer = entry.value;
-              return Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      initialValue: answer.text,
-                      decoration: InputDecoration(
-                        labelText: 'Вариант ${index + 1}',
-                        border: const OutlineInputBorder(),
+                final index = entry.key;
+                final answer = entry.value;
+                return Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        initialValue: answer.text,
+                        decoration: InputDecoration(
+                          labelText: 'Вариант ${index + 1}',
+                          border: const OutlineInputBorder(),
+                        ),
+                        onChanged: (value) {
+                          _answers[index] = Answer(
+                            id: answer.id,
+                            text: value,
+                            isCorrect: answer.isCorrect,
+                          );
+                        },
                       ),
-                      onChanged: (value) {
-                        _answers[index] = Answer(
-                          id: answer.id,
-                          text: value,
-                          isCorrect: answer.isCorrect,
-                        );
-                      },
                     ),
-                  ),
-                  Checkbox(
-                    value: answer.isCorrect,
-                    onChanged: _selectedType == QuestionType.multipleChoice
-                        ? (value) {
-                            setState(() {
-                              _answers[index] = Answer(
-                                id: answer.id,
-                                text: answer.text,
-                                isCorrect: value ?? false,
-                              );
-                            });
-                          }
-                        : (value) {
-                            // Для single choice снимаем выделение с других
-                            setState(() {
-                              for (int i = 0; i < _answers.length; i++) {
-                                _answers[i] = Answer(
-                                  id: _answers[i].id,
-                                  text: _answers[i].text,
-                                  isCorrect: i == index,
+                    Checkbox(
+                      value: answer.isCorrect,
+                      onChanged: _selectedType == QuestionType.multipleChoice
+                          ? (value) {
+                              setState(() {
+                                _answers[index] = Answer(
+                                  id: answer.id,
+                                  text: answer.text,
+                                  isCorrect: value ?? false,
                                 );
-                              }
-                            });
-                          },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: _answers.length > 2
-                        ? () {
-                            setState(() {
-                              _answers.removeAt(index);
-                            });
-                          }
-                        : null,
-                  ),
-                ],
-              );
+                              });
+                            }
+                          : (value) {
+                              // Для single choice снимаем выделение с других
+                              setState(() {
+                                for (int i = 0; i < _answers.length; i++) {
+                                  _answers[i] = Answer(
+                                    id: _answers[i].id,
+                                    text: _answers[i].text,
+                                    isCorrect: i == index,
+                                  );
+                                }
+                              });
+                            },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: _answers.length > 2
+                          ? () {
+                              setState(() {
+                                _answers.removeAt(index);
+                              });
+                            }
+                          : null,
+                    ),
+                  ],
+                );
               }),
               const SizedBox(height: 8),
               ElevatedButton.icon(

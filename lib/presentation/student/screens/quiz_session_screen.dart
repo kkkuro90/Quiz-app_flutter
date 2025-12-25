@@ -5,10 +5,7 @@ import '../../../data/models/quiz_model.dart';
 import '../../../data/models/quiz_result_model.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/quiz_repository.dart';
-<<<<<<< HEAD
 import '../../../core/services/real_time_quiz_service.dart';
-=======
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
 
 class QuizSessionScreen extends StatefulWidget {
   final Quiz quiz;
@@ -23,7 +20,8 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
   int _currentQuestionIndex = 0;
   final Map<int, List<String>> _selectedAnswers = {};
   final Map<int, String> _textAnswers = {}; // Для текстовых ответов
-  final Map<int, TextEditingController> _textAnswerControllers = {}; // Контроллеры для текстовых ответов
+  final Map<int, TextEditingController> _textAnswerControllers =
+      {}; // Контроллеры для текстовых ответов
   final Map<int, DateTime> _questionStartTimes = {};
   int _remainingTime = 0;
   late Timer _timer;
@@ -32,8 +30,9 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
   @override
   void initState() {
     super.initState();
-    _realTimeService = RealTimeQuizService(); // Keep it in case we need it later
-    
+    _realTimeService =
+        RealTimeQuizService(); // Keep it in case we need it later
+
     // Для тестов самостоятельного обучения нет ограничения по времени
     if (widget.quiz.quizType == QuizType.selfStudy) {
       _remainingTime = -1; // -1 означает, что таймер не активен
@@ -89,7 +88,9 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
     // Update quiz status when quiz is left
     _realTimeService.updateQuizStatus(
       quizId: widget.quiz.id,
-      status: _currentQuestionIndex >= widget.quiz.questions.length - 1 ? 'completed' : 'interrupted',
+      status: _currentQuestionIndex >= widget.quiz.questions.length - 1
+          ? 'completed'
+          : 'interrupted',
     );
 
     super.dispose();
@@ -129,7 +130,6 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
         _selectedAnswers[_currentQuestionIndex] = currentAnswers;
       }
     });
-
   }
 
   void _nextQuestion() {
@@ -167,26 +167,18 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
     for (int i = 0; i < quiz.questions.length; i++) {
       final question = quiz.questions[i];
       final selected = _selectedAnswers[i] ?? <String>[];
-<<<<<<< HEAD
       final textAnswer = _textAnswers[i];
-=======
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
       maxPoints += question.points;
 
       bool isCorrect = false;
       int points = 0;
-<<<<<<< HEAD
       String? studentTextAnswer;
 
       if (question.type == QuestionType.singleChoice) {
-        final correctAnswers = question.answers.where((a) => a.isCorrect).toList();
-        if (correctAnswers.isNotEmpty && selected.contains(correctAnswers.first.id)) {
-=======
-
-      if (question.type == QuestionType.singleChoice) {
-        final correctAnswer = question.answers.firstWhere((a) => a.isCorrect);
-        if (selected.contains(correctAnswer.id)) {
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
+        final correctAnswers =
+            question.answers.where((a) => a.isCorrect).toList();
+        if (correctAnswers.isNotEmpty &&
+            selected.contains(correctAnswers.first.id)) {
           isCorrect = true;
           points = question.points;
           totalPoints += points;
@@ -201,24 +193,23 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
           isCorrect = true;
           points = question.points;
           totalPoints += points;
-<<<<<<< HEAD
         }
       } else if (question.type == QuestionType.textAnswer) {
         studentTextAnswer = textAnswer?.trim() ?? '';
-        if (studentTextAnswer.isNotEmpty && question.correctTextAnswers != null) {
+        if (studentTextAnswer.isNotEmpty &&
+            question.correctTextAnswers != null) {
           // Сравниваем ответ ученика с правильными вариантами (без учета регистра)
           final studentAnswerLower = studentTextAnswer.toLowerCase();
           final isAnswerCorrect = question.correctTextAnswers!.any(
-            (correctAnswer) => correctAnswer.toLowerCase().trim() == studentAnswerLower,
+            (correctAnswer) =>
+                correctAnswer.toLowerCase().trim() == studentAnswerLower,
           );
-          
+
           if (isAnswerCorrect) {
             isCorrect = true;
             points = question.points;
             totalPoints += points;
           }
-=======
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
         }
       }
 
@@ -226,11 +217,7 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
         StudentAnswer(
           questionId: question.id,
           selectedAnswers: List<String>.from(selected),
-<<<<<<< HEAD
           textAnswer: studentTextAnswer,
-=======
-          textAnswer: null,
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
           isCorrect: isCorrect,
           points: points,
           timeSpent: null,
@@ -239,31 +226,6 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
     }
 
     final percentage = maxPoints > 0 ? totalPoints / maxPoints : 0.0;
-<<<<<<< HEAD
-=======
-
-    // Сохраняем результат в репозиторий (бэкенд)
-    final authRepo = context.read<AuthRepository>();
-    final quizRepo = context.read<QuizRepository>();
-    final student = authRepo.currentUser;
-
-    if (student != null) {
-      final result = QuizResult(
-        id: '', // будет проставлен на стороне Firestore
-        quizId: quiz.id,
-        studentId: student.id,
-        studentName: student.name,
-        totalPoints: totalPoints,
-        maxPoints: maxPoints,
-        percentage: percentage,
-        completedAt: DateTime.now(),
-        answers: answers,
-      );
-
-      // Отправляем результат в репозиторий (и далее в Firestore)
-      quizRepo.addResult(result);
-    }
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
 
     // Сохраняем результат в репозиторий (бэкенд)
     final authRepo = context.read<AuthRepository>();
@@ -411,19 +373,23 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
                         return _buildCheckboxAnswerOption(
                             answer, selectedAnswers.contains(answer.id));
                       }),
-                    ] else if (currentQuestion.type == QuestionType.textAnswer) ...[
+                    ] else if (currentQuestion.type ==
+                        QuestionType.textAnswer) ...[
                       // Текстовый ответ
                       const SizedBox(height: 16),
                       Builder(
                         builder: (context) {
                           // Получаем или создаем контроллер для текущего вопроса
-                          if (!_textAnswerControllers.containsKey(_currentQuestionIndex)) {
-                            _textAnswerControllers[_currentQuestionIndex] = TextEditingController(
+                          if (!_textAnswerControllers
+                              .containsKey(_currentQuestionIndex)) {
+                            _textAnswerControllers[_currentQuestionIndex] =
+                                TextEditingController(
                               text: _textAnswers[_currentQuestionIndex] ?? '',
                             );
                           }
-                          final controller = _textAnswerControllers[_currentQuestionIndex]!;
-                          
+                          final controller =
+                              _textAnswerControllers[_currentQuestionIndex]!;
+
                           return TextFormField(
                             controller: controller,
                             decoration: const InputDecoration(

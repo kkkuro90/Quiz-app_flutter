@@ -43,21 +43,13 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
         final activeQuizzes =
             quizRepo.quizzes.where((q) => q.isActive).toList();
 
-<<<<<<< HEAD
-=======
-        // Для текущей версии показываем все квизы учителя (один аккаунт преподавателя),
-        // при этом сортируем так, чтобы новые (по времени проведения) были первыми.
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
-        final myQuizzes = [...quizRepo.quizzes]
-          ..sort(
+        final myQuizzes = [...quizRepo.quizzes]..sort(
             (a, b) {
-              final aDate = a.scheduledAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-              final bDate = b.scheduledAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-<<<<<<< HEAD
-              return bDate.compareTo(aDate); 
-=======
-              return bDate.compareTo(aDate); // по убыванию даты
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
+              final aDate =
+                  a.scheduledAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+              final bDate =
+                  b.scheduledAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+              return bDate.compareTo(aDate);
             },
           );
 
@@ -124,7 +116,8 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                     final pin = quiz.pinCode ?? _getQuizPin(quiz);
                     return QuizCard(
                       title: quiz.title,
-                      subtitle: 'PIN: $pin • ${quiz.questions.length} вопросов • ${quiz.duration} мин',
+                      subtitle:
+                          'PIN: $pin • ${quiz.questions.length} вопросов • ${quiz.duration} мин',
                       borderColor: AppColors.primary,
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -133,14 +126,16 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                               ? OutlinedButton(
                                   onPressed: () {
                                     // Остановить квиз
-                                    quizRepo.updateQuiz(quiz.copyWith(isActive: false));
+                                    quizRepo.updateQuiz(
+                                        quiz.copyWith(isActive: false));
                                   },
                                   child: const Text('Остановить'),
                                 )
                               : ElevatedButton(
                                   onPressed: () {
                                     // Активировать квиз
-                                    quizRepo.updateQuiz(quiz.copyWith(isActive: true));
+                                    quizRepo.updateQuiz(
+                                        quiz.copyWith(isActive: true));
                                   },
                                   child: const Text('Запустить'),
                                 ),
@@ -150,7 +145,8 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => QuizAnalyticsScreen(quiz: quiz),
+                                  builder: (context) =>
+                                      QuizAnalyticsScreen(quiz: quiz),
                                 ),
                               );
                             },
@@ -165,11 +161,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                   const SizedBox(height: 32),
                   _buildMyQuizzesCard(myQuizzes),
                 ],
-<<<<<<< HEAD
-=======
-                const SizedBox(height: 32),
-                _buildScheduleCard(controller.schedule, controller),
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
                 const SizedBox(height: 32),
                 _buildQuickActions(context),
                 const SizedBox(height: 32),
@@ -288,7 +279,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
       ),
     );
   }
-  
 
   Widget _buildSliderRow({
     required String label,
@@ -331,7 +321,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
             item.date.isAfter(now.subtract(const Duration(days: 1))) &&
             item.date.isBefore(nextWeek))
         .toList()
-          ..sort((a, b) => a.date.compareTo(b.date));
+      ..sort((a, b) => a.date.compareTo(b.date));
 
     return Card(
       child: Padding(
@@ -358,25 +348,25 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
               const Text('Расписание пустое на ближайшую неделю')
             else
               ...upcomingSchedule.take(4).map(
-                (item) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(
-                    backgroundColor: _scheduleColor(item.type),
-                    child: Icon(
-                      _getScheduleIcon(item.type),
-                      color: Colors.white,
+                    (item) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                        backgroundColor: _scheduleColor(item.type),
+                        child: Icon(
+                          _getScheduleIcon(item.type),
+                          color: Colors.white,
+                        ),
+                      ),
+                      title: Text(item.title),
+                      subtitle: Text(
+                        '${_formatDate(item.date)} • ${item.description}',
+                      ),
+                      trailing: Text(
+                        _formatTime(item.date),
+                        style: const TextStyle(color: Colors.grey),
+                      ),
                     ),
                   ),
-                  title: Text(item.title),
-                  subtitle: Text(
-                    '${_formatDate(item.date)} • ${item.description}',
-                  ),
-                  trailing: Text(
-                    _formatTime(item.date),
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
@@ -461,7 +451,8 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                             ),
                           );
                           if (picked != null) {
-                            final BuildContext dialogContext = context; // Capture context before async gap
+                            final BuildContext dialogContext =
+                                context; // Capture context before async gap
                             final time = await showTimePicker(
                               context: dialogContext,
                               initialTime: TimeOfDay.fromDateTime(selectedDate),
@@ -540,7 +531,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                   final quiz = myQuizzes[index];
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
-<<<<<<< HEAD
                     leading: CircleAvatar(
                       backgroundColor: Colors.blue,
                       child: const Icon(
@@ -549,8 +539,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                         size: 20,
                       ),
                     ),
-=======
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
                     title: Text(quiz.title),
                     subtitle: Text(
                       quiz.description.isEmpty
@@ -687,22 +675,22 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
               const Text('Новых уведомлений нет')
             else
               ...notifications.take(4).map(
-                (notification) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    _notificationIcon(notification.type),
-                    color: _notificationColor(notification.type),
+                    (notification) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        _notificationIcon(notification.type),
+                        color: _notificationColor(notification.type),
+                      ),
+                      title: Text(notification.title),
+                      subtitle: Text(notification.message),
+                      trailing: notification.isRead
+                          ? const Icon(Icons.check, color: Colors.green)
+                          : TextButton(
+                              onPressed: () => onMarkRead(notification.id),
+                              child: const Text('Прочитать'),
+                            ),
+                    ),
                   ),
-                  title: Text(notification.title),
-                  subtitle: Text(notification.message),
-                  trailing: notification.isRead
-                      ? const Icon(Icons.check, color: Colors.green)
-                      : TextButton(
-                          onPressed: () => onMarkRead(notification.id),
-                          child: const Text('Прочитать'),
-                        ),
-                ),
-              ),
           ],
         ),
       ),
@@ -726,7 +714,8 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                 Expanded(
                   child: _AnalyticsStat(
                     label: 'Средний балл',
-                    value: '${(summary.averageScore * 100).toStringAsFixed(1)}%',
+                    value:
+                        '${(summary.averageScore * 100).toStringAsFixed(1)}%',
                   ),
                 ),
                 Expanded(
@@ -865,7 +854,8 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
 
   String _getQuizPin(Quiz quiz) {
     // Возвращаем PIN из квиза, если он есть, иначе генерируем на основе ID (резервный вариант)
-    return quiz.pinCode ?? (quiz.id.hashCode % 10000).toString().padLeft(4, '0');
+    return quiz.pinCode ??
+        (quiz.id.hashCode % 10000).toString().padLeft(4, '0');
   }
 }
 

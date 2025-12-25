@@ -37,16 +37,29 @@ class StudentHomeScreen extends StatelessWidget {
             final activeQuizzes =
                 quizRepo.quizzes.where((q) => q.isActive).toList();
 
-            // Фильтруем тесты: исключаем пройденные
-            // Показываем все тесты с scheduledAt (даже если время ещё не наступило),
-            // а доступность по времени проверяем уже при нажатии.
-            final availableQuizzes = quizRepo.quizzes
+            // Ближайшие тесты: показываем только тесты на оценку по времени, которые скоро откроются
+            final now = DateTime.now();
+            final upcomingQuizzes = quizRepo.quizzes
                 .where((q) {
                   if (passedQuizIds.contains(q.id)) return false;
-                  return q.scheduledAt != null;
+                  // Показываем только тесты на оценку по времени
+                  if (q.quizType != QuizType.timedTest) return false;
+                  if (q.scheduledAt == null) return false;
+                  // Показываем только тесты, которые еще не закончились
+                  final start = q.scheduledAt!;
+                  final end = start.add(Duration(minutes: q.duration));
+                  // Показываем тесты, которые еще не закончились
+                  return now.isBefore(end);
                 })
-                .take(3)
-                .toList();
+                .toList()
+              ..sort((a, b) {
+                // Сортируем по времени начала (ближайшие первыми)
+                final aStart = a.scheduledAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+                final bStart = b.scheduledAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+                return aStart.compareTo(bStart);
+              });
+            
+            final availableQuizzes = upcomingQuizzes.take(3).toList();
 
             return ListView(
               padding: const EdgeInsets.all(20),
@@ -89,38 +102,56 @@ class StudentHomeScreen extends StatelessWidget {
                 ),
               ),
                 ),
-                if (quizRepo.quizzes.isNotEmpty) ...[
-                  const SizedBox(height: 24),
-                  Text(
-                    'Предметы',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: quizRepo.quizzes
-                        .map((q) => q.subject)
+                // Предметы только для тестов самостоятельного обучения
+                Builder(
+                  builder: (context) {
+                    final selfStudySubjects = quizRepo.quizzes
+                        .where((q) => q.quizType == QuizType.selfStudy)
+                        .map((q) => q.subject.trim())
+                        .where((subject) => subject.isNotEmpty)
                         .toSet()
-                        .map(
-                          (subject) => ActionChip(
-                            label: Text(subject),
-                            avatar: const Icon(Icons.book),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => QuizCatalogScreen(
-                                    initialSubject: subject,
-                                  ),
+                        .toList()
+                      ..sort();
+                    
+                    if (selfStudySubjects.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 24),
+                        Text(
+                          'Предметы',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: selfStudySubjects
+                              .map(
+                                (subject) => ActionChip(
+                                  label: Text(subject),
+                                  avatar: const Icon(Icons.book),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => QuizCatalogScreen(
+                                          initialSubject: subject,
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
-                              );
-                            },
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ],
+                              )
+                              .toList(),
+                        ),
+                      ],
+                    );
+                  },
+                ),
                 if (results.isNotEmpty) ...[
                   const SizedBox(height: 32),
                   Text(
@@ -164,7 +195,7 @@ class StudentHomeScreen extends StatelessWidget {
                 if (availableQuizzes.isNotEmpty) ...[
                   const SizedBox(height: 32),
                   Text(
-                    'Рекомендуемые тесты',
+                    'Ближайшие тесты',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 16),

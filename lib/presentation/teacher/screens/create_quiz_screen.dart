@@ -24,6 +24,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   List<Question> _questions = [];
   bool _isGenerating = false;
   DateTime? _scheduledAt;
+  QuizType _quizType = QuizType.timedTest; // По умолчанию тест на оценку
 
   @override
   void initState() {
@@ -34,8 +35,9 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       _subjectController.text = widget.quiz!.subject;
       _durationController.text = widget.quiz!.duration.toString();
       _pinController.text = widget.quiz!.pinCode ?? '';
-      _questions = widget.quiz!.questions;
+      _questions = List.from(widget.quiz!.questions);
       _scheduledAt = widget.quiz!.scheduledAt;
+      _quizType = widget.quiz!.quizType;
     }
   }
 
@@ -117,27 +119,70 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   }
 
   void _saveQuiz() {
-    if (_formKey.currentState!.validate() && _questions.isNotEmpty) {
-      final ownerId =
-          context.read<AuthRepository>().currentUser?.id ?? 'unknown-teacher';
-
-      final quiz = Quiz(
-        id: widget.quiz?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-        title: _titleController.text,
-        description: _descriptionController.text,
-        subject: _subjectController.text,
-        questions: _questions,
-        duration: int.parse(_durationController.text),
-        pinCode: _pinController.text.isNotEmpty ? _pinController.text : null,
-        scheduledAt: _scheduledAt,
-        ownerId: ownerId,
+    if (!mounted) return;
+    
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Пожалуйста, заполните все обязательные поля')),
       );
+      return;
+    }
 
-      Navigator.pop(context, quiz);
-    } else if (_questions.isEmpty) {
+    if (_questions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Добавьте хотя бы один вопрос')),
       );
+      return;
+    }
+
+    try {
+      final ownerId =
+          context.read<AuthRepository>().currentUser?.id ?? 'unknown-teacher';
+
+      final duration = int.tryParse(_durationController.text) ?? 30;
+      
+      // Для самостоятельного обучения не требуется время начала и PIN-код
+      final pinCode = _quizType == QuizType.timedTest && _pinController.text.trim().isNotEmpty
+          ? _pinController.text.trim()
+          : null;
+      final scheduledAt = _quizType == QuizType.timedTest ? _scheduledAt : null;
+      final isActive = _quizType == QuizType.timedTest ? false : false; // Самостоятельное обучение не активируется
+      
+      final quiz = widget.quiz != null
+          ? widget.quiz!.copyWith(
+              title: _titleController.text.trim(),
+              description: _descriptionController.text.trim(),
+              subject: _subjectController.text.trim(),
+              questions: _questions,
+              duration: duration,
+              pinCode: pinCode,
+              scheduledAt: scheduledAt,
+              quizType: _quizType,
+              isActive: isActive,
+            )
+          : Quiz(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              title: _titleController.text.trim(),
+              description: _descriptionController.text.trim(),
+              subject: _subjectController.text.trim(),
+              questions: _questions,
+              duration: duration,
+              pinCode: pinCode,
+              scheduledAt: scheduledAt,
+              ownerId: ownerId,
+              quizType: _quizType,
+              isActive: isActive,
+            );
+
+      if (mounted) {
+        Navigator.pop(context, quiz);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка при сохранении: $e')),
+        );
+      }
     }
   }
 
@@ -210,35 +255,84 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.schedule),
-                      title: const Text('Время начала квиза'),
-                      subtitle: Text(
-                        _scheduledAt != null
-                            ? '${_formatDate(_scheduledAt!)} • ${_formatTime(_scheduledAt!)}'
-                            : 'Не выбрано',
-                      ),
-                      trailing: TextButton(
-                        onPressed: _pickStartDateTime,
-                        child: Text(
-                          _scheduledAt != null ? 'Изменить' : 'Выбрать',
+                    // Выбор типа квиза
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Тип квиза',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 12),
+                            RadioListTile<QuizType>(
+                              title: const Text('Тест на оценку по времени'),
+                              subtitle: const Text('Тест с ограничением по времени, доступен в определенное время'),
+                              value: QuizType.timedTest,
+                              groupValue: _quizType,
+                              onChanged: (value) {
+                                setState(() {
+                                  _quizType = value!;
+                                });
+                              },
+                            ),
+                            RadioListTile<QuizType>(
+                              title: const Text('Самостоятельное обучение'),
+                              subtitle: const Text('Всегда доступен для прохождения, без ограничений по времени'),
+                              value: QuizType.selfStudy,
+                              groupValue: _quizType,
+                              onChanged: (value) {
+                                setState(() {
+                                  _quizType = value!;
+                                  // Для самостоятельного обучения убираем время начала
+                                  if (value == QuizType.selfStudy) {
+                                    _scheduledAt = null;
+                                  }
+                                });
+                              },
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _pinController,
-                      decoration: const InputDecoration(
-                        labelText: 'PIN-код (для подключения учеников)',
-                        hintText: 'Введите 4-значный PIN',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.pin),
+                    // Время начала квиза (только для тестов на оценку)
+                    if (_quizType == QuizType.timedTest) ...[
+                      const SizedBox(height: 16),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.schedule),
+                        title: const Text('Время начала квиза'),
+                        subtitle: Text(
+                          _scheduledAt != null
+                              ? '${_formatDate(_scheduledAt!)} • ${_formatTime(_scheduledAt!)}'
+                              : 'Не выбрано',
+                        ),
+                        trailing: TextButton(
+                          onPressed: _pickStartDateTime,
+                          child: Text(
+                            _scheduledAt != null ? 'Изменить' : 'Выбрать',
+                          ),
+                        ),
                       ),
-                      keyboardType: TextInputType.number,
-                      maxLength: 4,
-                      enabled: widget.quiz?.isActive != true, // Disable if quiz is already active
-                    ),
+                    ],
+                    // PIN-код только для тестов на оценку
+                    if (_quizType == QuizType.timedTest) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _pinController,
+                        decoration: const InputDecoration(
+                          labelText: 'PIN-код (для подключения учеников)',
+                          hintText: 'Введите 4-значный PIN',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.pin),
+                        ),
+                        keyboardType: TextInputType.number,
+                        maxLength: 4,
+                        enabled: widget.quiz?.isActive != true, // Disable if quiz is already active
+                      ),
+                    ],
                     if (widget.quiz?.pinCode != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
@@ -344,6 +438,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   }
 
   Future<void> _pickStartDateTime() async {
+    if (!mounted) return;
+    
     final now = DateTime.now();
     final initialDate = _scheduledAt ?? now;
 
@@ -355,6 +451,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     );
 
     if (pickedDate == null) return;
+    if (!mounted) return;
 
     final pickedTime = await showTimePicker(
       context: context,
@@ -362,16 +459,21 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     );
 
     if (pickedTime == null) return;
+    if (!mounted) return;
 
-    setState(() {
-      _scheduledAt = DateTime(
-        pickedDate.year,
-        pickedDate.month,
-        pickedDate.day,
-        pickedTime.hour,
-        pickedTime.minute,
-      );
-    });
+    final newScheduledAt = DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+
+    if (mounted) {
+      setState(() {
+        _scheduledAt = newScheduledAt;
+      });
+    }
   }
 
   String _formatDate(DateTime date) =>
@@ -397,6 +499,9 @@ class _AddQuestionDialogState extends State<AddQuestionDialog> {
     Answer(id: '1', text: '', isCorrect: true),
     Answer(id: '2', text: '', isCorrect: false),
   ];
+  final List<TextEditingController> _textAnswerControllers = [
+    TextEditingController(),
+  ];
 
   void _addAnswer() {
     setState(() {
@@ -408,6 +513,30 @@ class _AddQuestionDialogState extends State<AddQuestionDialog> {
     });
   }
 
+  void _addTextAnswer() {
+    setState(() {
+      _textAnswerControllers.add(TextEditingController());
+    });
+  }
+
+  void _removeTextAnswer(int index) {
+    if (_textAnswerControllers.length > 1) {
+      setState(() {
+        _textAnswerControllers[index].dispose();
+        _textAnswerControllers.removeAt(index);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _textAnswerControllers) {
+      controller.dispose();
+    }
+    _questionController.dispose();
+    super.dispose();
+  }
+
   void _saveQuestion() {
     if (_questionController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -416,11 +545,26 @@ class _AddQuestionDialogState extends State<AddQuestionDialog> {
       return;
     }
 
+    List<String>? correctTextAnswers;
+    if (_selectedType == QuestionType.textAnswer) {
+      correctTextAnswers = _textAnswerControllers
+          .map((c) => c.text.trim())
+          .where((text) => text.isNotEmpty)
+          .toList();
+      if (correctTextAnswers.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Добавьте хотя бы один правильный вариант ответа')),
+        );
+        return;
+      }
+    }
+
     final question = Question(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       text: _questionController.text,
       type: _selectedType,
       answers: _answers.where((a) => a.text.isNotEmpty).toList(),
+      correctTextAnswers: correctTextAnswers,
     );
 
     widget.onQuestionAdded(question);
@@ -463,7 +607,47 @@ class _AddQuestionDialogState extends State<AddQuestionDialog> {
               ),
             ),
             const SizedBox(height: 16),
-            ..._answers.asMap().entries.map((entry) {
+            // Показываем поля для правильных текстовых ответов только для текстовых вопросов
+            if (_selectedType == QuestionType.textAnswer) ...[
+              const Text(
+                'Правильные варианты ответов:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              ..._textAnswerControllers.asMap().entries.map((entry) {
+                final index = entry.key;
+                final controller = entry.value;
+                return Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: controller,
+                        decoration: InputDecoration(
+                          labelText: 'Правильный ответ ${index + 1}',
+                          border: const OutlineInputBorder(),
+                          hintText: 'Введите правильный вариант ответа',
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: _textAnswerControllers.length > 1
+                          ? () => _removeTextAnswer(index)
+                          : null,
+                    ),
+                  ],
+                );
+              }),
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                onPressed: _addTextAnswer,
+                icon: const Icon(Icons.add),
+                label: const Text('Добавить вариант ответа'),
+              ),
+              const SizedBox(height: 16),
+            ] else ...[
+              // Показываем варианты ответов для single/multiple choice
+              ..._answers.asMap().entries.map((entry) {
               final index = entry.key;
               final answer = entry.value;
               return Row(
@@ -521,13 +705,14 @@ class _AddQuestionDialogState extends State<AddQuestionDialog> {
                   ),
                 ],
               );
-            }),
-            const SizedBox(height: 8),
-            ElevatedButton.icon(
-              onPressed: _addAnswer,
-              icon: const Icon(Icons.add),
-              label: const Text('Добавить вариант'),
-            ),
+              }),
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                onPressed: _addAnswer,
+                icon: const Icon(Icons.add),
+                label: const Text('Добавить вариант'),
+              ),
+            ],
           ],
         ),
       ),

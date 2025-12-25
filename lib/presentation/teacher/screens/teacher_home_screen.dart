@@ -43,14 +43,12 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
         final activeQuizzes =
             quizRepo.quizzes.where((q) => q.isActive).toList();
 
-        // Для текущей версии показываем все квизы учителя (один аккаунт преподавателя),
-        // при этом сортируем так, чтобы новые (по времени проведения) были первыми.
         final myQuizzes = [...quizRepo.quizzes]
           ..sort(
             (a, b) {
               final aDate = a.scheduledAt ?? DateTime.fromMillisecondsSinceEpoch(0);
               final bDate = b.scheduledAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-              return bDate.compareTo(aDate); // по убыванию даты
+              return bDate.compareTo(aDate); 
             },
           );
 
@@ -159,9 +157,9 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                   _buildMyQuizzesCard(myQuizzes),
                 ],
                 const SizedBox(height: 32),
-                _buildScheduleCard(controller.schedule, controller),
-                const SizedBox(height: 32),
                 _buildQuickActions(context),
+                const SizedBox(height: 32),
+                _buildScheduleCard(controller.schedule, controller),
                 const SizedBox(height: 16),
                 _buildGradeConversionCard(controller, grade, gradePercentage),
                 const SizedBox(height: 16),
@@ -528,6 +526,14 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                   final quiz = myQuizzes[index];
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.blue,
+                      child: const Icon(
+                        Icons.quiz,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
                     title: Text(quiz.title),
                     subtitle: Text(
                       quiz.description.isEmpty

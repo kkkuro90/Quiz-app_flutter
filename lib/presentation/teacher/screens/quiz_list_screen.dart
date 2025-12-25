@@ -111,6 +111,17 @@ class QuizCard extends StatelessWidget {
           children: [
             Row(
               children: [
+                // Quiz icon
+                CircleAvatar(
+                  backgroundColor: Colors.blue,
+                  radius: 20,
+                  child: const Icon(
+                    Icons.quiz,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     quiz.title,
@@ -139,7 +150,7 @@ class QuizCard extends StatelessWidget {
                     const PopupMenuItem(
                       value: 'export',
                       child: ListTile(
-                        leading: Icon(Icons.import_export), // ← ИСПРАВЛЕНО
+                        leading: Icon(Icons.import_export),
                         title: Text('Экспорт'),
                       ),
                     ),
@@ -300,43 +311,6 @@ class QuizCard extends StatelessWidget {
       initialDate: DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-<<<<<<< HEAD
-    ).then((selectedDate) async {
-      if (selectedDate != null && context.mounted) {
-        // Show time picker after date is selected
-        final time = await showTimePicker(
-          context: context,
-          initialTime: TimeOfDay.now(),
-        );
-
-        if (time != null && context.mounted) {
-          // Combine date and time
-          final scheduledAt = DateTime(
-            selectedDate.year,
-            selectedDate.month,
-            selectedDate.day,
-            time.hour,
-            time.minute,
-          );
-
-          // Update the quiz in the repository with the scheduled time
-          final updatedQuiz = quiz.copyWith(scheduledAt: scheduledAt);
-          final quizRepo = context.read<QuizRepository>();
-          await quizRepo.updateQuiz(updatedQuiz);
-
-          // Show success message
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Квиз запланирован на ${scheduledAt.day}.${scheduledAt.month}.${scheduledAt.year} в ${scheduledAt.hour.toString().padLeft(2, '0')}:${scheduledAt.minute.toString().padLeft(2, '0')}',
-                ),
-              ),
-            );
-          }
-        }
-      }
-=======
     ).then((selectedDate) {
       if (selectedDate == null || !context.mounted) return;
 
@@ -369,33 +343,10 @@ class QuizCard extends StatelessWidget {
           ),
         );
       });
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
     });
   }
 
   void _exportQuiz(BuildContext context) {
-<<<<<<< HEAD
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Экспорт квиза'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Выберите формат экспорта:'),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.description),
-                title: const Text('GIFT (Moodle)'),
-                subtitle: const Text('Формат для импорта в Moodle'),
-                onTap: () {
-                  final giftContent = ExportService.exportToGiftFormat(quiz);
-                  _showExportContent(context, 'quiz_export.gift', giftContent);
-                  Navigator.pop(context);
-=======
     showModalBottomSheet(
       context: context,
       builder: (ctx) {
@@ -414,29 +365,11 @@ class QuizCard extends StatelessWidget {
                   final content = ExportService.exportToGiftFormat(quiz);
                   Navigator.pop(ctx);
                   _showExportResult(context, 'GIFT', content);
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.table_chart),
                 title: const Text('CSV'),
-<<<<<<< HEAD
-                subtitle: const Text('Формат таблицы'),
-                onTap: () {
-                  final csvContent = ExportService.exportToCsv(quiz);
-                  _showExportContent(context, 'quiz_export.csv', csvContent);
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.data_object),
-                title: const Text('JSON'),
-                subtitle: const Text('Формат данных'),
-                onTap: () {
-                  final jsonContent = ExportService.exportToJson(quiz);
-                  _showExportContent(context, 'quiz_export.json', jsonContent);
-                  Navigator.pop(context);
-=======
                 onTap: () {
                   final content = ExportService.exportToCsv(quiz);
                   Navigator.pop(ctx);
@@ -450,54 +383,10 @@ class QuizCard extends StatelessWidget {
                   final content = ExportService.exportToJson(quiz);
                   Navigator.pop(ctx);
                   _showExportResult(context, 'JSON', content);
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
                 },
               ),
             ],
           ),
-<<<<<<< HEAD
-        ),
-      ),
-    );
-  }
-
-  void _showExportContent(BuildContext context, String filename, String content) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Экспортированный файл: $filename'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: Text(
-              content,
-              style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Закрыть'),
-          ),
-          TextButton(
-            onPressed: () {
-              // In a real implementation, this would trigger file download
-              // For now, just show a message
-              Navigator.pop(context);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Файл экспортирован (в реальном приложении файл будет скачан)'),
-                  ),
-                );
-              }
-            },
-            child: const Text('Скачать'),
-          ),
-        ],
-      ),
-=======
         );
       },
     );
@@ -527,7 +416,6 @@ class QuizCard extends StatelessWidget {
           ],
         );
       },
->>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
     );
   }
 

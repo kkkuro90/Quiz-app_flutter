@@ -19,6 +19,8 @@ class QuizSessionScreen extends StatefulWidget {
 class _QuizSessionScreenState extends State<QuizSessionScreen> {
   int _currentQuestionIndex = 0;
   final Map<int, List<String>> _selectedAnswers = {};
+  final Map<int, String> _textAnswers = {}; // Для текстовых ответов
+  final Map<int, TextEditingController> _textAnswerControllers = {}; // Контроллеры для текстовых ответов
   final Map<int, DateTime> _questionStartTimes = {};
   int _remainingTime = 0;
   late Timer _timer;
@@ -28,10 +30,15 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
   void initState() {
     super.initState();
     _realTimeService = RealTimeQuizService(); // Keep it in case we need it later
-    _remainingTime = widget.quiz.duration * 60;
-
-    // Just use local timer for now, avoid server-side timing issues
-    _startLocalTimer();
+    
+    // Для тестов самостоятельного обучения нет ограничения по времени
+    if (widget.quiz.quizType == QuizType.selfStudy) {
+      _remainingTime = -1; // -1 означает, что таймер не активен
+    } else {
+      _remainingTime = widget.quiz.duration * 60;
+      // Just use local timer for now, avoid server-side timing issues
+      _startLocalTimer();
+    }
 
     // Record start time for the first question
     _recordQuestionStartTime(0);
@@ -65,8 +72,16 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
 
   @override
   void dispose() {
-    _timer.cancel();
+    if (_remainingTime >= 0) {
+      _timer.cancel();
+    }
     _realTimeService.dispose();
+
+    // Dispose text answer controllers
+    for (var controller in _textAnswerControllers.values) {
+      controller.dispose();
+    }
+    _textAnswerControllers.clear();
 
     // Update quiz status when quiz is left
     _realTimeService.updateQuizStatus(
@@ -137,7 +152,9 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
   }
 
   void _submitQuiz() async {
-    _timer.cancel();
+    if (_remainingTime >= 0) {
+      _timer.cancel();
+    }
 
     final quiz = widget.quiz;
     int totalPoints = 0;
@@ -147,10 +164,12 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
     for (int i = 0; i < quiz.questions.length; i++) {
       final question = quiz.questions[i];
       final selected = _selectedAnswers[i] ?? <String>[];
+      final textAnswer = _textAnswers[i];
       maxPoints += question.points;
 
       bool isCorrect = false;
       int points = 0;
+      String? studentTextAnswer;
 
       if (question.type == QuestionType.singleChoice) {
         final correctAnswers = question.answers.where((a) => a.isCorrect).toList();
@@ -170,13 +189,28 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
           points = question.points;
           totalPoints += points;
         }
+      } else if (question.type == QuestionType.textAnswer) {
+        studentTextAnswer = textAnswer?.trim() ?? '';
+        if (studentTextAnswer.isNotEmpty && question.correctTextAnswers != null) {
+          // Сравниваем ответ ученика с правильными вариантами (без учета регистра)
+          final studentAnswerLower = studentTextAnswer.toLowerCase();
+          final isAnswerCorrect = question.correctTextAnswers!.any(
+            (correctAnswer) => correctAnswer.toLowerCase().trim() == studentAnswerLower,
+          );
+          
+          if (isAnswerCorrect) {
+            isCorrect = true;
+            points = question.points;
+            totalPoints += points;
+          }
+        }
       }
 
       answers.add(
         StudentAnswer(
           questionId: question.id,
           selectedAnswers: List<String>.from(selected),
-          textAnswer: null,
+          textAnswer: studentTextAnswer,
           isCorrect: isCorrect,
           points: points,
           timeSpent: null,
@@ -191,9 +225,10 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
     final quizRepo = context.read<QuizRepository>();
     final student = authRepo.currentUser;
 
+    QuizResult result;
     if (student != null) {
-      final result = QuizResult(
-        id: '', // будет проставлен на стороне Firestore
+      result = QuizResult(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
         quizId: quiz.id,
         studentId: student.id,
         studentName: student.name,
@@ -203,43 +238,43 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
         completedAt: DateTime.now(),
         answers: answers,
       );
-
-      // Отправляем результат в репозиторий (и далее в Firestore)
-      quizRepo.addResult(result);
-    }
-
-    // Create and save quiz result
-    final result = QuizResult(
-      id: DateTime.now().millisecondsSinceEpoch.toString(), // Generate unique ID
-      quizId: widget.quiz.id,
-      studentId: 'current_student', // In a real app, this would be the actual student ID
-      studentName: 'Current Student', // In a real app, this would be the actual student name
-      totalPoints: totalPoints,
-      maxPoints: maxPoints,
-      percentage: percentage,
-      completedAt: DateTime.now(),
-      answers: answers,
-    );
-
-    // Save result to repository (which also saves to Firestore)
-    quizRepo.addResult(result);
-
-    // Skip updating server status to avoid permission issues
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => QuizResultDialog(
+    } else {
+      result = QuizResult(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        quizId: widget.quiz.id,
+        studentId: 'current_student',
+        studentName: 'Current Student',
         totalPoints: totalPoints,
         maxPoints: maxPoints,
         percentage: percentage,
-        onClose: () {
-          if (context.mounted) {
-            Navigator.pop(context); // Simply pop the QuizSessionScreen
-          }
-        },
-      ),
-    );
+        completedAt: DateTime.now(),
+        answers: answers,
+      );
+    }
+
+    // Сохраняем результат в репозиторий (и далее в Firestore)
+    quizRepo.addResult(result);
+
+    // Показываем диалог с результатом
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => QuizResultDialog(
+          totalPoints: totalPoints,
+          maxPoints: maxPoints,
+          percentage: percentage,
+          onClose: () {
+            if (context.mounted) {
+              Navigator.pop(context); // Закрываем диалог
+              if (context.mounted) {
+                Navigator.pop(context); // Закрываем QuizSessionScreen
+              }
+            }
+          },
+        ),
+      );
+    }
   }
 
   @override
@@ -262,20 +297,37 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
       appBar: AppBar(
         title: Text(widget.quiz.title),
         actions: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: _remainingTime < 60 ? Colors.red : Colors.green,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              _formatTime(_remainingTime),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+          // Таймер только для тестов на оценку
+          if (widget.quiz.quizType == QuizType.timedTest && _remainingTime >= 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: _remainingTime < 60 ? Colors.red : Colors.green,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                _formatTime(_remainingTime),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          else if (widget.quiz.quizType == QuizType.selfStudy)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.blue,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                'Без ограничения',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
         ],
       ),
       body: Padding(
@@ -314,15 +366,32 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
                         return _buildCheckboxAnswerOption(
                             answer, selectedAnswers.contains(answer.id));
                       }),
-                    ] else ...[
+                    ] else if (currentQuestion.type == QuestionType.textAnswer) ...[
                       // Текстовый ответ
                       const SizedBox(height: 16),
-                      TextFormField(
-                        decoration: const InputDecoration(
-                          labelText: 'Ваш ответ',
-                          border: OutlineInputBorder(),
-                        ),
-                        maxLines: 3,
+                      Builder(
+                        builder: (context) {
+                          // Получаем или создаем контроллер для текущего вопроса
+                          if (!_textAnswerControllers.containsKey(_currentQuestionIndex)) {
+                            _textAnswerControllers[_currentQuestionIndex] = TextEditingController(
+                              text: _textAnswers[_currentQuestionIndex] ?? '',
+                            );
+                          }
+                          final controller = _textAnswerControllers[_currentQuestionIndex]!;
+                          
+                          return TextFormField(
+                            controller: controller,
+                            decoration: const InputDecoration(
+                              labelText: 'Ваш ответ',
+                              border: OutlineInputBorder(),
+                              hintText: 'Введите ваш ответ',
+                            ),
+                            maxLines: 5,
+                            onChanged: (value) {
+                              _textAnswers[_currentQuestionIndex] = value;
+                            },
+                          );
+                        },
                       ),
                     ],
                   ],

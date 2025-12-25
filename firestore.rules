@@ -25,7 +25,7 @@ service cloud.firestore {
       allow delete: if isOwner(userId);
     }
     
-    // Коллекция quizzes - учителя создают, все читают активные
+     Коллекция quizzes - учителя создают, все читают активные
     match /quizzes/{quizId} {
       allow read: if isAuthenticated();
       allow list: if isAuthenticated();  // Allow querying/reading lists

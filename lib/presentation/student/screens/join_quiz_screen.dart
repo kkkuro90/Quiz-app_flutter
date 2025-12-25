@@ -84,17 +84,23 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
       }
     }
 
-    // Блокировка по времени: тест доступен только в интервале [start; start+duration]
+    // Блокировка по времени: тест доступен только если:
+    // 1. Квиз активен И имеет PIN-код
+    // 2. Если квиз запланирован (scheduledAt), то текущее время должно быть в интервале [start, end]
+    // 3. Если квиз не запланирован, но активен и имеет PIN - доступен сразу
     final now = DateTime.now();
     final start = activeQuiz.scheduledAt;
-    final end = start != null
-        ? start.add(Duration(minutes: activeQuiz.duration))
-        : null;
-    // Тест доступен только если есть scheduledAt и текущее время в интервале [start, end]
-    final isOpen = start != null &&
-        now.isAfter(start.subtract(const Duration(seconds: 1))) &&
-        end != null &&
-        now.isBefore(end);
+    bool isOpen = false;
+    
+    if (start != null) {
+      // Квиз запланирован - проверяем время
+      final end = start.add(Duration(minutes: activeQuiz.duration));
+      isOpen = now.isAfter(start.subtract(const Duration(seconds: 1))) &&
+          now.isBefore(end);
+    } else {
+      // Квиз не запланирован - доступен если активен и имеет PIN
+      isOpen = activeQuiz.isActive && activeQuiz.pinCode != null;
+    }
 
     if (!isOpen) {
       setState(() {
@@ -106,7 +112,7 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
             content: Text(
               start != null
                   ? 'Тест будет доступен с ${start.day.toString().padLeft(2, '0')}.${start.month.toString().padLeft(2, '0')} ${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}'
-                  : 'Тест сейчас недоступен',
+                  : 'Тест сейчас недоступен. Убедитесь, что квиз активирован.',
             ),
           ),
         );

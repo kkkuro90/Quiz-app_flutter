@@ -11,6 +11,7 @@ class Quiz {
   final String? pinCode; // PIN-код для подключения
   final DateTime? pinExpiresAt; // Срок действия PIN-кода
   final bool? isQuizActive; // Дополнительное поле для активности квиза в реальном времени
+  final QuizType quizType; // Тип квиза: тест на оценку по времени или самостоятельное обучение
 
   Quiz({
     required this.id,
@@ -25,6 +26,7 @@ class Quiz {
     this.pinCode,
     this.pinExpiresAt,
     this.isQuizActive,
+    this.quizType = QuizType.timedTest, // По умолчанию тест на оценку
   });
 
   factory Quiz.fromJson(Map<String, dynamic> json, [String? documentId]) {
@@ -46,6 +48,9 @@ class Quiz {
           ? DateTime.parse(json['pinExpiresAt'])
           : null,
       isQuizActive: json['isQuizActive'],
+      quizType: json['quizType'] != null
+          ? QuizType.values[json['quizType']]
+          : QuizType.timedTest, // По умолчанию тест на оценку
     );
   }
 
@@ -63,6 +68,7 @@ class Quiz {
       if (pinCode != null) 'pinCode': pinCode,
       if (pinExpiresAt != null) 'pinExpiresAt': pinExpiresAt!.toIso8601String(),
       if (isQuizActive != null) 'isQuizActive': isQuizActive,
+      'quizType': quizType.index,
     };
   }
 
@@ -79,6 +85,7 @@ class Quiz {
     String? pinCode,
     DateTime? pinExpiresAt,
     bool? isQuizActive,
+    QuizType? quizType,
   }) {
     return Quiz(
       id: id ?? this.id,
@@ -93,6 +100,7 @@ class Quiz {
       pinCode: pinCode ?? this.pinCode,
       pinExpiresAt: pinExpiresAt ?? this.pinExpiresAt,
       isQuizActive: isQuizActive ?? this.isQuizActive,
+      quizType: quizType ?? this.quizType,
     );
   }
 }
@@ -104,6 +112,7 @@ class Question {
   final List<Answer> answers;
   final int points;
   final String? topic; // Тема/раздел для тематической аналитики
+  final List<String>? correctTextAnswers; // Правильные варианты ответов для текстовых вопросов
 
   Question({
     required this.id,
@@ -112,6 +121,7 @@ class Question {
     required this.answers,
     this.points = 1,
     this.topic,
+    this.correctTextAnswers,
   });
 
   factory Question.fromJson(Map<String, dynamic> json) {
@@ -123,6 +133,9 @@ class Question {
           (json['answers'] as List).map((a) => Answer.fromJson(a)).toList(),
       points: json['points'] ?? 1,
       topic: json['topic'],
+      correctTextAnswers: json['correctTextAnswers'] != null
+          ? List<String>.from(json['correctTextAnswers'])
+          : null,
     );
   }
 
@@ -134,6 +147,7 @@ class Question {
       'answers': answers.map((a) => a.toJson()).toList(),
       'points': points,
       if (topic != null) 'topic': topic,
+      if (correctTextAnswers != null) 'correctTextAnswers': correctTextAnswers,
     };
   }
 }
@@ -170,4 +184,9 @@ enum QuestionType {
   singleChoice,
   multipleChoice,
   textAnswer,
+}
+
+enum QuizType {
+  timedTest, // Тест на оценку по времени
+  selfStudy, // Самостоятельное обучение (всегда открыт)
 }

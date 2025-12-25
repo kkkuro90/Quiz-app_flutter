@@ -18,14 +18,40 @@ class AnalyticsScreen extends StatelessWidget {
           final summary = controller.analyticsSummary;
 
           if (summary.totalAttempts == 0) {
-            return const Center(
-              child: Text('Данных для аналитики пока нет'),
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.analytics_outlined,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Данных для аналитики пока нет',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'После прохождения тестов учениками здесь появится статистика',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[500],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             );
           }
 
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
+          return RefreshIndicator(
+            onRefresh: () async => controller.refresh(),
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
               Row(
                 children: [
                   _StatCard(
@@ -259,7 +285,8 @@ class AnalyticsScreen extends StatelessWidget {
                   ),
                 ),
               ],
-            ],
+              ],
+            ),
           );
         },
       ),

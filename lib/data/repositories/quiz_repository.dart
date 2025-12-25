@@ -234,23 +234,32 @@ class QuizRepository with ChangeNotifier {
   Future<void> updateQuiz(Quiz quiz) async {
     if (quiz.id.isEmpty) return;
 
-    Quiz quizToUpdate = quiz;
+    try {
+      Quiz quizToUpdate = quiz;
 
-    // If quiz is being activated and doesn't have a PIN, generate one with expiration
-    if (quiz.isActive && quiz.pinCode == null) {
-      final pinResult = await _generatePinCodeWithExpiration();
-      quizToUpdate = quiz.copyWith(
-        pinCode: pinResult['pinCode'],
-        pinExpiresAt: pinResult['expiresAt'] != null ? DateTime.parse(pinResult['expiresAt']!) : null,
-      );
-    } else if (quiz.isActive && quiz.pinCode != null && quiz.pinExpiresAt == null) {
-      // If quiz is active and has a PIN but no expiration, add expiration
-      quizToUpdate = quiz.copyWith(
-        pinExpiresAt: DateTime.now().add(const Duration(hours: 24)),
-      );
+      // If quiz is being activated and doesn't have a PIN, generate one with expiration
+      if (quiz.isActive && quiz.pinCode == null) {
+        final pinResult = await _generatePinCodeWithExpiration();
+        quizToUpdate = quiz.copyWith(
+          pinCode: pinResult['pinCode'],
+          pinExpiresAt: pinResult['expiresAt'] != null ? DateTime.parse(pinResult['expiresAt']!) : null,
+        );
+      } else if (quiz.isActive && quiz.pinCode != null && quiz.pinExpiresAt == null) {
+        // If quiz is active and has a PIN but no expiration, add expiration
+        quizToUpdate = quiz.copyWith(
+          pinExpiresAt: DateTime.now().add(const Duration(hours: 24)),
+        );
+      }
+
+      final data = quizToUpdate.toJson();
+      data.remove('id'); // Remove id field as it's the document ID, not a field
+      
+      // Use set with merge to ensure all fields are updated correctly
+      await _db.collection('quizzes').doc(quiz.id).set(data, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Error updating quiz: $e');
+      rethrow;
     }
-
-    await _db.collection('quizzes').doc(quiz.id).update(quizToUpdate.toJson());
   }
 
   Future<void> deleteQuiz(String quizId) async {

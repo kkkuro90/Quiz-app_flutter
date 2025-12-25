@@ -5,7 +5,10 @@ import '../../../data/models/quiz_model.dart';
 import '../../../data/models/quiz_result_model.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/quiz_repository.dart';
+<<<<<<< HEAD
 import '../../../core/services/real_time_quiz_service.dart';
+=======
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
 
 class QuizSessionScreen extends StatefulWidget {
   final Quiz quiz;
@@ -164,16 +167,26 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
     for (int i = 0; i < quiz.questions.length; i++) {
       final question = quiz.questions[i];
       final selected = _selectedAnswers[i] ?? <String>[];
+<<<<<<< HEAD
       final textAnswer = _textAnswers[i];
+=======
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
       maxPoints += question.points;
 
       bool isCorrect = false;
       int points = 0;
+<<<<<<< HEAD
       String? studentTextAnswer;
 
       if (question.type == QuestionType.singleChoice) {
         final correctAnswers = question.answers.where((a) => a.isCorrect).toList();
         if (correctAnswers.isNotEmpty && selected.contains(correctAnswers.first.id)) {
+=======
+
+      if (question.type == QuestionType.singleChoice) {
+        final correctAnswer = question.answers.firstWhere((a) => a.isCorrect);
+        if (selected.contains(correctAnswer.id)) {
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
           isCorrect = true;
           points = question.points;
           totalPoints += points;
@@ -188,6 +201,7 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
           isCorrect = true;
           points = question.points;
           totalPoints += points;
+<<<<<<< HEAD
         }
       } else if (question.type == QuestionType.textAnswer) {
         studentTextAnswer = textAnswer?.trim() ?? '';
@@ -203,6 +217,8 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
             points = question.points;
             totalPoints += points;
           }
+=======
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
         }
       }
 
@@ -210,7 +226,11 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
         StudentAnswer(
           questionId: question.id,
           selectedAnswers: List<String>.from(selected),
+<<<<<<< HEAD
           textAnswer: studentTextAnswer,
+=======
+          textAnswer: null,
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
           isCorrect: isCorrect,
           points: points,
           timeSpent: null,
@@ -219,6 +239,31 @@ class _QuizSessionScreenState extends State<QuizSessionScreen> {
     }
 
     final percentage = maxPoints > 0 ? totalPoints / maxPoints : 0.0;
+<<<<<<< HEAD
+=======
+
+    // Сохраняем результат в репозиторий (бэкенд)
+    final authRepo = context.read<AuthRepository>();
+    final quizRepo = context.read<QuizRepository>();
+    final student = authRepo.currentUser;
+
+    if (student != null) {
+      final result = QuizResult(
+        id: '', // будет проставлен на стороне Firestore
+        quizId: quiz.id,
+        studentId: student.id,
+        studentName: student.name,
+        totalPoints: totalPoints,
+        maxPoints: maxPoints,
+        percentage: percentage,
+        completedAt: DateTime.now(),
+        answers: answers,
+      );
+
+      // Отправляем результат в репозиторий (и далее в Firestore)
+      quizRepo.addResult(result);
+    }
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
 
     // Сохраняем результат в репозиторий (бэкенд)
     final authRepo = context.read<AuthRepository>();

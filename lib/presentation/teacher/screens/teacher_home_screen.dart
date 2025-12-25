@@ -43,12 +43,21 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
         final activeQuizzes =
             quizRepo.quizzes.where((q) => q.isActive).toList();
 
+<<<<<<< HEAD
+=======
+        // Для текущей версии показываем все квизы учителя (один аккаунт преподавателя),
+        // при этом сортируем так, чтобы новые (по времени проведения) были первыми.
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
         final myQuizzes = [...quizRepo.quizzes]
           ..sort(
             (a, b) {
               final aDate = a.scheduledAt ?? DateTime.fromMillisecondsSinceEpoch(0);
               final bDate = b.scheduledAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+<<<<<<< HEAD
               return bDate.compareTo(aDate); 
+=======
+              return bDate.compareTo(aDate); // по убыванию даты
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
             },
           );
 
@@ -156,6 +165,11 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                   const SizedBox(height: 32),
                   _buildMyQuizzesCard(myQuizzes),
                 ],
+<<<<<<< HEAD
+=======
+                const SizedBox(height: 32),
+                _buildScheduleCard(controller.schedule, controller),
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
                 const SizedBox(height: 32),
                 _buildQuickActions(context),
                 const SizedBox(height: 32),
@@ -526,6 +540,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                   final quiz = myQuizzes[index];
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
+<<<<<<< HEAD
                     leading: CircleAvatar(
                       backgroundColor: Colors.blue,
                       child: const Icon(
@@ -534,6 +549,8 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                         size: 20,
                       ),
                     ),
+=======
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
                     title: Text(quiz.title),
                     subtitle: Text(
                       quiz.description.isEmpty

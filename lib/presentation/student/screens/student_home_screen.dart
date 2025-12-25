@@ -37,6 +37,7 @@ class StudentHomeScreen extends StatelessWidget {
             final activeQuizzes =
                 quizRepo.quizzes.where((q) => q.isActive).toList();
 
+<<<<<<< HEAD
             // Ближайшие тесты: показываем только тесты на оценку по времени, которые скоро откроются
             final now = DateTime.now();
             final upcomingQuizzes = quizRepo.quizzes
@@ -60,6 +61,18 @@ class StudentHomeScreen extends StatelessWidget {
               });
             
             final availableQuizzes = upcomingQuizzes.take(3).toList();
+=======
+            // Фильтруем тесты: исключаем пройденные
+            // Показываем все тесты с scheduledAt (даже если время ещё не наступило),
+            // а доступность по времени проверяем уже при нажатии.
+            final availableQuizzes = quizRepo.quizzes
+                .where((q) {
+                  if (passedQuizIds.contains(q.id)) return false;
+                  return q.scheduledAt != null;
+                })
+                .take(3)
+                .toList();
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
 
             return ListView(
               padding: const EdgeInsets.all(20),
@@ -102,6 +115,7 @@ class StudentHomeScreen extends StatelessWidget {
                 ),
               ),
                 ),
+<<<<<<< HEAD
                 // Предметы только для тестов самостоятельного обучения
                 Builder(
                   builder: (context) {
@@ -190,12 +204,88 @@ class StudentHomeScreen extends StatelessWidget {
                         );
                       },
                     );
+=======
+                if (quizRepo.quizzes.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    'Предметы',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: quizRepo.quizzes
+                        .map((q) => q.subject)
+                        .toSet()
+                        .map(
+                          (subject) => ActionChip(
+                            label: Text(subject),
+                            avatar: const Icon(Icons.book),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => QuizCatalogScreen(
+                                    initialSubject: subject,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+                if (results.isNotEmpty) ...[
+                  const SizedBox(height: 32),
+                  Text(
+                    'Пройденные тесты',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  ...results.map((result) {
+                    Quiz? quiz;
+                    for (final q in quizRepo.quizzes) {
+                      if (q.id == result.quizId) {
+                        quiz = q;
+                        break;
+                      }
+                    }
+                    if (quiz == null) {
+                      return const SizedBox.shrink();
+                    }
+
+                    final correctCount =
+                        result.answers.where((a) => a.isCorrect).length;
+                    final totalAnswers = result.answers.length;
+
+                    return QuizCard(
+                      title: quiz.title,
+                      subtitle:
+                          '$correctCount/$totalAnswers правильных ответов • ${(result.percentage * 100).toStringAsFixed(0)}%',
+                      trailing: Chip(
+                        label: Text('Оценка ${result.grade}'),
+                      ),
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Тест уже пройден, повторное прохождение недоступно'),
+                          ),
+                        );
+                      },
+                    );
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
                   }),
                 ],
                 if (availableQuizzes.isNotEmpty) ...[
                   const SizedBox(height: 32),
                   Text(
+<<<<<<< HEAD
                     'Ближайшие тесты',
+=======
+                    'Рекомендуемые тесты',
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 16),

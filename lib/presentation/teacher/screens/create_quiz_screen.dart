@@ -24,7 +24,10 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   List<Question> _questions = [];
   bool _isGenerating = false;
   DateTime? _scheduledAt;
+<<<<<<< HEAD
   QuizType _quizType = QuizType.timedTest; // По умолчанию тест на оценку
+=======
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
 
   @override
   void initState() {
@@ -35,9 +38,14 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       _subjectController.text = widget.quiz!.subject;
       _durationController.text = widget.quiz!.duration.toString();
       _pinController.text = widget.quiz!.pinCode ?? '';
+<<<<<<< HEAD
       _questions = List.from(widget.quiz!.questions);
       _scheduledAt = widget.quiz!.scheduledAt;
       _quizType = widget.quiz!.quizType;
+=======
+      _questions = widget.quiz!.questions;
+      _scheduledAt = widget.quiz!.scheduledAt;
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
     }
   }
 
@@ -119,11 +127,28 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   }
 
   void _saveQuiz() {
+<<<<<<< HEAD
     if (!mounted) return;
     
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Пожалуйста, заполните все обязательные поля')),
+=======
+    if (_formKey.currentState!.validate() && _questions.isNotEmpty) {
+      final ownerId =
+          context.read<AuthRepository>().currentUser?.id ?? 'unknown-teacher';
+
+      final quiz = Quiz(
+        id: widget.quiz?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        title: _titleController.text,
+        description: _descriptionController.text,
+        subject: _subjectController.text,
+        questions: _questions,
+        duration: int.parse(_durationController.text),
+        pinCode: _pinController.text.isNotEmpty ? _pinController.text : null,
+        scheduledAt: _scheduledAt,
+        ownerId: ownerId,
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
       );
       return;
     }
@@ -255,6 +280,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
+<<<<<<< HEAD
                     // Выбор типа квиза
                     Card(
                       child: Padding(
@@ -295,6 +321,32 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                             ),
                           ],
                         ),
+=======
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.schedule),
+                      title: const Text('Время начала квиза'),
+                      subtitle: Text(
+                        _scheduledAt != null
+                            ? '${_formatDate(_scheduledAt!)} • ${_formatTime(_scheduledAt!)}'
+                            : 'Не выбрано',
+                      ),
+                      trailing: TextButton(
+                        onPressed: _pickStartDateTime,
+                        child: Text(
+                          _scheduledAt != null ? 'Изменить' : 'Выбрать',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _pinController,
+                      decoration: const InputDecoration(
+                        labelText: 'PIN-код (для подключения учеников)',
+                        hintText: 'Введите 4-значный PIN',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.pin),
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
                       ),
                     ),
                     // Время начала квиза (только для тестов на оценку)
@@ -438,8 +490,11 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   }
 
   Future<void> _pickStartDateTime() async {
+<<<<<<< HEAD
     if (!mounted) return;
     
+=======
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
     final now = DateTime.now();
     final initialDate = _scheduledAt ?? now;
 
@@ -451,7 +506,10 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     );
 
     if (pickedDate == null) return;
+<<<<<<< HEAD
     if (!mounted) return;
+=======
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
 
     final pickedTime = await showTimePicker(
       context: context,
@@ -459,6 +517,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     );
 
     if (pickedTime == null) return;
+<<<<<<< HEAD
     if (!mounted) return;
 
     final newScheduledAt = DateTime(
@@ -474,6 +533,18 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
         _scheduledAt = newScheduledAt;
       });
     }
+=======
+
+    setState(() {
+      _scheduledAt = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      );
+    });
+>>>>>>> 2e096c9f1c108dfed9888cf4b77d503caf0d5935
   }
 
   String _formatDate(DateTime date) =>

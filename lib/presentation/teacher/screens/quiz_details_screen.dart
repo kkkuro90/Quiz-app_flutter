@@ -48,8 +48,18 @@ class _QuizDetailsScreenState extends State<QuizDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final quizRepo = context.read<QuizRepository>();
+    final quizRepo = context.watch<QuizRepository>();
     final formatter = DateFormat('dd.MM.yyyy HH:mm');
+
+    // Получаем актуальное состояние квиза из репозитория
+    Quiz? currentQuiz;
+    try {
+      currentQuiz = quizRepo.quizzes.firstWhere(
+        (q) => q.id == _quiz.id,
+      );
+    } catch (e) {
+      currentQuiz = _quiz;
+    }
 
     final startAt = _scheduledAt;
     final endAt = startAt != null
@@ -94,10 +104,12 @@ class _QuizDetailsScreenState extends State<QuizDetailsScreen> {
                         scheduledAt: _scheduledAt,
                       );
                       await quizRepo.updateQuiz(updated);
-                      setState(() {
-                        _quiz = updated;
-                        _isEditing = false;
-                      });
+                      if (mounted) {
+                        setState(() {
+                          _quiz = updated;
+                          _isEditing = false;
+                        });
+                      }
                     } else {
                       setState(() => _isEditing = true);
                     }
@@ -167,6 +179,59 @@ class _QuizDetailsScreenState extends State<QuizDetailsScreen> {
               title: const Text('Количество вопросов'),
               subtitle: Text('${_quiz.questions.length} вопросов'),
             ),
+            const SizedBox(height: 24),
+            if (currentQuiz != null) ...[
+              currentQuiz.isActive
+                  ? ElevatedButton.icon(
+                      onPressed: () async {
+                        final updatedQuiz = currentQuiz!.copyWith(isActive: false);
+                        await quizRepo.updateQuiz(updatedQuiz);
+                        if (mounted) {
+                          setState(() {
+                            _quiz = updatedQuiz;
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Квиз остановлен'),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.stop),
+                      label: const Text('Остановить квиз'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                    )
+                  : ElevatedButton.icon(
+                      onPressed: () async {
+                        final updatedQuiz = currentQuiz!.copyWith(isActive: true);
+                        await quizRepo.updateQuiz(updatedQuiz);
+                        if (mounted) {
+                          setState(() {
+                            _quiz = updatedQuiz;
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Квиз запущен!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text('Запустить квиз'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                    ),
+              const SizedBox(height: 16),
+            ],
           ],
         ),
       ),

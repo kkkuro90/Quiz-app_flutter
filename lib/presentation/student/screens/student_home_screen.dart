@@ -252,6 +252,19 @@ class StudentHomeScreen extends StatelessWidget {
                           return;
                         }
 
+                        // If the quiz has a PIN code, redirect to PIN entry instead of direct access
+                        if (quiz.pinCode != null && quiz.pinCode!.isNotEmpty) {
+                          if (context.mounted) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const JoinQuizScreen(),
+                              ),
+                            );
+                          }
+                          return;
+                        }
+
                         if (context.mounted) {
                           Navigator.push(
                             context,

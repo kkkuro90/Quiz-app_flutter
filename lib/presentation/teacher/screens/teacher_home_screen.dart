@@ -110,14 +110,15 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                   ),
                   const SizedBox(height: 16),
                   ...activeQuizzes.map((quiz) {
-                    final pin = quiz.pinCode ?? _getQuizPin(quiz);
+                    final pin = quiz.pinCode; // Only show the actual stored PIN, no fallback
                     return QuizCard(
                       title: quiz.title,
                       subtitle:
-                          'PIN: $pin • ${quiz.questions.length} вопросов • ${quiz.duration} мин',
+                          'PIN: ${pin ?? 'не задан'} • ${quiz.questions.length} вопросов • ${quiz.duration} мин',
                       borderColor: AppColors.primary,
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      trailing: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
                           quiz.isActive
                               ? OutlinedButton(
@@ -134,7 +135,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                                   },
                                   child: const Text('Запустить'),
                                 ),
-                          const SizedBox(width: 8),
                           ElevatedButton(
                             onPressed: () {
                               Navigator.push(
@@ -846,6 +846,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
   }
 
   String _getQuizPin(Quiz quiz) {
+    // Only generate fallback PIN if no manual PIN exists
     return quiz.pinCode ??
         (quiz.id.hashCode % 10000).toString().padLeft(4, '0');
   }

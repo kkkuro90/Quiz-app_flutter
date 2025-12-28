@@ -6,6 +6,7 @@ import '../../../data/repositories/quiz_repository.dart';
 import '../../../core/services/export_service.dart';
 import 'create_quiz_screen.dart';
 import 'quiz_analytics_screen.dart';
+import 'quiz_details_screen.dart';
 
 class QuizListScreen extends StatefulWidget {
   const QuizListScreen({super.key});
@@ -104,17 +105,26 @@ class QuizCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => QuizDetailsScreen(quiz: quiz),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                CircleAvatar(
+                const CircleAvatar(
                   backgroundColor: Colors.blue,
                   radius: 20,
-                  child: const Icon(
+                  child: Icon(
                     Icons.quiz,
                     color: Colors.white,
                     size: 24,
@@ -132,6 +142,13 @@ class QuizCard extends StatelessWidget {
                     _handleMenuAction(value, context, quizRepo);
                   },
                   itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'details',
+                      child: ListTile(
+                        leading: Icon(Icons.info),
+                        title: Text('Детали'),
+                      ),
+                    ),
                     const PopupMenuItem(
                       value: 'edit',
                       child: ListTile(
@@ -189,13 +206,34 @@ class QuizCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      _startQuiz(context, quiz, quizRepo);
-                    },
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Запустить'),
-                  ),
+                  child: quiz.isActive
+                      ? OutlinedButton.icon(
+                          onPressed: () {
+                            quizRepo.updateQuiz(quiz.copyWith(isActive: false));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Квиз остановлен'),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.stop),
+                          label: const Text('Остановить'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                          ),
+                        )
+                      : ElevatedButton.icon(
+                          onPressed: () {
+                            _startQuiz(context, quiz, quizRepo);
+                          },
+                          icon: const Icon(Icons.play_arrow),
+                          label: const Text('Запустить'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -210,6 +248,7 @@ class QuizCard extends StatelessWidget {
               ],
             ),
           ],
+          ),
         ),
       ),
     );
@@ -218,6 +257,14 @@ class QuizCard extends StatelessWidget {
   void _handleMenuAction(
       String value, BuildContext context, QuizRepository quizRepo) {
     switch (value) {
+      case 'details':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => QuizDetailsScreen(quiz: quiz),
+          ),
+        );
+        break;
       case 'edit':
         Navigator.push(
           context,
@@ -270,6 +317,7 @@ class QuizCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
+                      quiz.pinCode ??
                       '${DateTime.now().millisecondsSinceEpoch % 10000}'
                           .padLeft(4, '0'),
                       style: const TextStyle(

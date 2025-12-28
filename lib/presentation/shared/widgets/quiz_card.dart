@@ -58,9 +58,12 @@ class QuizCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (trailing != null) trailing!,
                 ],
               ),
+              if (trailing != null) ...[
+                const SizedBox(height: 12),
+                trailing!,
+              ],
             ],
           ),
         ),

@@ -4,7 +4,6 @@ import '../../../core/theme/colors.dart';
 import '../../../data/repositories/quiz_repository.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/models/quiz_model.dart';
-import '../../../data/repositories/quiz_repository.dart';
 import 'quiz_session_screen.dart';
 
 class JoinQuizScreen extends StatefulWidget {
@@ -35,8 +34,19 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
 
     final activeQuiz = quizRepo.quizzes.firstWhere(
       (quiz) {
-        final pin = quiz.pinCode ?? _getQuizPin(quiz);
-        return quiz.isActive && pin == _pinController.text;
+        // Check if quiz is active by status or by time schedule
+        bool isQuizActive = quiz.isActive;
+        if (!isQuizActive && quiz.scheduledAt != null) {
+          // Check if quiz is active by time schedule
+          final start = quiz.scheduledAt!;
+          final end = start.add(Duration(minutes: quiz.duration));
+          final now = DateTime.now();
+          isQuizActive = now.isAfter(start.subtract(const Duration(seconds: 1))) &&
+              now.isBefore(end);
+        }
+
+        // Only check the actual stored PIN code, not a generated one
+        return isQuizActive && quiz.pinCode != null && quiz.pinCode == _pinController.text;
       },
       orElse: () => Quiz(
         id: '',
@@ -78,9 +88,9 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
       }
     }
     final now = DateTime.now();
-    final start = activeQuiz.scheduledAt;
     bool isOpen = false;
-    if (start != null) {
+    if (activeQuiz.scheduledAt != null) {
+      final start = activeQuiz.scheduledAt!;
       final end = start.add(Duration(minutes: activeQuiz.duration));
       isOpen = now.isAfter(start.subtract(const Duration(seconds: 1))) &&
           now.isBefore(end);
@@ -96,8 +106,8 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              start != null
-                  ? 'Тест будет доступен с ${start.day.toString().padLeft(2, '0')}.${start.month.toString().padLeft(2, '0')} ${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}'
+              activeQuiz.scheduledAt != null
+                  ? 'Тест будет доступен с ${activeQuiz.scheduledAt!.day.toString().padLeft(2, '0')}.${activeQuiz.scheduledAt!.month.toString().padLeft(2, '0')} ${activeQuiz.scheduledAt!.hour.toString().padLeft(2, '0')}:${activeQuiz.scheduledAt!.minute.toString().padLeft(2, '0')}'
                   : 'Тест сейчас недоступен. Убедитесь, что квиз активирован.',
             ),
           ),
@@ -120,9 +130,6 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
     }
   }
 
-  String _getQuizPin(Quiz quiz) {
-    return (quiz.hashCode.abs() % 10000).toString().padLeft(4, '0');
-  }
 
   @override
   Widget build(BuildContext context) {

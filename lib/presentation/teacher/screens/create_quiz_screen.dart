@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../../../data/models/quiz_model.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../data/repositories/quiz_repository.dart';
 
 class CreateQuizScreen extends StatefulWidget {
   final Quiz? quiz;
@@ -154,11 +154,45 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Получаем актуальное состояние квиза из репозитория, если он уже сохранен
+    Quiz? currentQuiz = widget.quiz;
+    if (widget.quiz != null && widget.quiz!.id.isNotEmpty) {
+      final quizRepo = context.watch<QuizRepository>();
+      try {
+        currentQuiz = quizRepo.quizzes.firstWhere(
+          (q) => q.id == widget.quiz!.id,
+        );
+      } catch (e) {
+        // Квиз еще не сохранен в репозитории, используем widget.quiz
+        currentQuiz = widget.quiz;
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title:
             Text(widget.quiz == null ? 'Создать квиз' : 'Редактировать квиз'),
         actions: [
+          if (currentQuiz != null && currentQuiz.id.isNotEmpty && !currentQuiz.isActive)
+            IconButton(
+              icon: const Icon(Icons.play_arrow),
+              onPressed: () async {
+                // Обновить квиз с isActive: true
+                final updatedQuiz = currentQuiz!.copyWith(
+                  isActive: true,
+                );
+                await context.read<QuizRepository>().updateQuiz(updatedQuiz);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Квиз запущен!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              },
+              tooltip: 'Запустить квиз',
+            ),
           IconButton(
             icon: const Icon(Icons.save),
             onPressed: _saveQuiz,
@@ -386,6 +420,35 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                         ),
                       );
                     }),
+                    if (currentQuiz != null && currentQuiz.id.isNotEmpty && !currentQuiz.isActive) ...[
+                      const SizedBox(height: 24),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16.0),
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final updatedQuiz = currentQuiz!.copyWith(
+                              isActive: true,
+                            );
+                            await context.read<QuizRepository>().updateQuiz(updatedQuiz);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Квиз запущен!'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.play_arrow),
+                          label: const Text('Запустить квиз'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

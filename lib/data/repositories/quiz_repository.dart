@@ -49,6 +49,7 @@ class QuizRepository with ChangeNotifier {
 
   Future<void> createQuiz(Quiz quiz) async {
     Quiz quizWithPin = quiz;
+    // Only generate automatic PIN if no manual PIN was provided AND quiz is active
     if (quiz.pinCode == null && quiz.isActive) {
       final pinResult = await _generatePinCodeWithExpiration();
       quizWithPin = quiz.copyWith(
@@ -56,6 +57,7 @@ class QuizRepository with ChangeNotifier {
         pinExpiresAt: pinResult['expiresAt'] != null ? DateTime.parse(pinResult['expiresAt']!) : null,
       );
     } else if (quiz.pinCode != null && quiz.isActive) {
+      // If manual PIN exists and quiz is active, set expiration time
       quizWithPin = quiz.copyWith(
         pinExpiresAt: DateTime.now().add(const Duration(hours: 24)),
       );
@@ -98,6 +100,7 @@ class QuizRepository with ChangeNotifier {
     };
   }
   Future<bool> isValidPinCode(String pinCode) async {
+    // Сначала проверяем активные квизы с установленным isActive
     final snapshot = await _db
         .collection('quizzes')
         .where('pinCode', isEqualTo: pinCode)
@@ -116,11 +119,43 @@ class QuizRepository with ChangeNotifier {
       return true;
     }
 
+    // Если не найден активный квиз, проверяем квизы по времени
+    final allQuizzesSnapshot = await _db
+        .collection('quizzes')
+        .where('pinCode', isEqualTo: pinCode)
+        .get();
+
+    for (final doc in allQuizzesSnapshot.docs) {
+      final quizData = doc.data();
+      final quiz = Quiz.fromJson(quizData, doc.id);
+
+      // Проверяем, активен ли квиз по времени
+      if (quiz.scheduledAt != null) {
+        final start = quiz.scheduledAt!;
+        final end = start.add(Duration(minutes: quiz.duration));
+        final now = DateTime.now();
+        final isTimeActive = now.isAfter(start.subtract(const Duration(seconds: 1))) &&
+            now.isBefore(end);
+
+        if (isTimeActive) {
+          final expiresAtStr = quizData['pinExpiresAt'] as String?;
+          if (expiresAtStr != null) {
+            final expiresAt = DateTime.parse(expiresAtStr);
+            if (DateTime.now().isAfter(expiresAt)) {
+              continue; // Пропускаем просроченные PIN
+            }
+          }
+          return true;
+        }
+      }
+    }
+
     return false;
   }
 
   Future<Quiz?> getQuizByPinCode(String pinCode) async {
     try {
+      // Сначала ищем активные квизы с установленным isActive
       final snapshot = await _db
           .collection('quizzes')
           .where('pinCode', isEqualTo: pinCode)
@@ -138,6 +173,33 @@ class QuizRepository with ChangeNotifier {
 
         return quiz;
       }
+
+      // Если не найден активный квиз, проверяем квизы по времени
+      final allQuizzesSnapshot = await _db
+          .collection('quizzes')
+          .where('pinCode', isEqualTo: pinCode)
+          .get();
+
+      for (final doc in allQuizzesSnapshot.docs) {
+        final quiz = Quiz.fromJson(doc.data(), doc.id);
+
+        // Проверяем, активен ли квиз по времени
+        bool isTimeActive = false;
+        if (quiz.scheduledAt != null) {
+          final start = quiz.scheduledAt!;
+          final end = start.add(Duration(minutes: quiz.duration));
+          final now = DateTime.now();
+          isTimeActive = now.isAfter(start.subtract(const Duration(seconds: 1))) &&
+              now.isBefore(end);
+        }
+
+        if (isTimeActive) {
+          if (quiz.pinExpiresAt != null && DateTime.now().isAfter(quiz.pinExpiresAt!)) {
+            continue; // Пропускаем просроченные PIN
+          }
+          return quiz;
+        }
+      }
     } catch (e) {
       print('Error getting quiz by PIN: $e');
     }
@@ -154,14 +216,25 @@ class QuizRepository with ChangeNotifier {
       questions: [],
     ));
 
-    await _db.collection('quizzes').doc(quizId).update({
+    // Create update data that preserves existing PIN code and expiration
+    Map<String, dynamic> updateData = {
       'isQuizActive': isActive,
       'isActive': isActive,
-    });
+    };
+
+    // If activating and there's a manual PIN code, ensure expiration is set
+    if (isActive && quiz.pinCode != null && quiz.pinCode!.isNotEmpty) {
+      updateData['pinExpiresAt'] = DateTime.now().add(const Duration(hours: 24)).toIso8601String();
+    }
+
+    await _db.collection('quizzes').doc(quizId).update(updateData);
     if (quiz.id.isNotEmpty) {
       final updatedQuiz = quiz.copyWith(
         isQuizActive: isActive,
         isActive: isActive,
+        pinExpiresAt: isActive && quiz.pinCode != null && quiz.pinCode!.isNotEmpty
+            ? DateTime.now().add(const Duration(hours: 24))
+            : quiz.pinExpiresAt,
       );
       final index = _quizzes.indexWhere((q) => q.id == quizId);
       if (index != -1) {
@@ -204,15 +277,17 @@ class QuizRepository with ChangeNotifier {
 
     try {
       Quiz quizToUpdate = quiz;
+      // Only generate automatic PIN if no manual PIN was provided AND quiz is active AND no PIN exists
       if (quiz.isActive && quiz.pinCode == null) {
         final pinResult = await _generatePinCodeWithExpiration();
         quizToUpdate = quiz.copyWith(
           pinCode: pinResult['pinCode'],
           pinExpiresAt: pinResult['expiresAt'] != null ? DateTime.parse(pinResult['expiresAt']!) : null,
         );
-      } else if (quiz.isActive && quiz.pinCode != null && quiz.pinExpiresAt == null) {
+      } else if (quiz.isActive && quiz.pinCode != null) {
+        // If manual PIN exists and quiz is active, ensure expiration time is set
         quizToUpdate = quiz.copyWith(
-          pinExpiresAt: DateTime.now().add(const Duration(hours: 24)),
+          pinExpiresAt: quiz.pinExpiresAt ?? DateTime.now().add(const Duration(hours: 24)),
         );
       }
 

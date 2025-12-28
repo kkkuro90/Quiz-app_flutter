@@ -34,7 +34,7 @@
         "npm --prefix \"$RESOURCE_DIR\" run build"
       ],
       "ignore": [
-        "venv",
+        "node_modules",
         ".git",
         "firebase-debug.log",
         "firebase-debug.*.log",
@@ -53,5 +53,13 @@
   "extensions": {},
   "database": {
     "rules": "database.rules.json"
+  },
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
   }
 }

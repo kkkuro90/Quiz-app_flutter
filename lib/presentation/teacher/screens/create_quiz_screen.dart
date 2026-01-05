@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../../../data/models/quiz_model.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/quiz_repository.dart';
+import '../../../services/question_generation_service.dart';
+import '../../../config/api_config.dart';
+import '../../../services/openai_service.dart';
 
 class CreateQuizScreen extends StatefulWidget {
   final Quiz? quiz;
@@ -42,31 +45,92 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   }
 
   Future<void> _pickFile() async {
-    setState(() {
-      _isGenerating = true;
-    });
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      // Initialize OpenAI service with your API key
+      OpenAIService.initialize(ApiConfig.openAIApiKey);
 
-    setState(() {
-      _questions.addAll([
-        Question(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          text: 'Сгенерированный вопрос из файла (демо)',
-          type: QuestionType.singleChoice,
-          answers: [
-            Answer(id: '1', text: 'Правильный ответ', isCorrect: true),
-            Answer(id: '2', text: 'Неправильный ответ 1', isCorrect: false),
-            Answer(id: '3', text: 'Неправильный ответ 2', isCorrect: false),
-          ],
-        ),
-      ]);
-      _isGenerating = false;
-    });
+      setState(() {
+        _isGenerating = true;
+      });
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Вопросы сгенерированы успешно! (демо)')),
-      );
+      // Generate questions from file using AI
+      List<Map<String, dynamic>>? generatedQuestions =
+          await QuestionGenerationService.generateQuestionsFromFile();
+
+      if (generatedQuestions != null && generatedQuestions.isNotEmpty) {
+        List<Question> newQuestions = [];
+
+        for (var questionData in generatedQuestions) {
+          if (questionData.containsKey('question') &&
+              questionData.containsKey('options')) {
+
+            String questionText = questionData['question'] ?? '';
+            List<dynamic> options = questionData['options'] ?? [];
+            String correctAnswer = questionData['correct_answer'] ?? options.first;
+
+            // Create answers from options
+            List<Answer> answers = [];
+            for (int i = 0; i < options.length; i++) {
+              String option = options[i].toString();
+              bool isCorrect = option == correctAnswer;
+
+              answers.add(Answer(
+                id: 'ans_${DateTime.now().millisecondsSinceEpoch}_$i',
+                text: option,
+                isCorrect: isCorrect,
+              ));
+            }
+
+            // Create the question
+            newQuestions.add(Question(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              text: questionText,
+              type: QuestionType.singleChoice, // Default to single choice
+              answers: answers,
+            ));
+          }
+        }
+
+        setState(() {
+          _questions.addAll(newQuestions);
+          _isGenerating = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Сгенерировано ${newQuestions.length} вопросов из файла!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        setState(() {
+          _isGenerating = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Не удалось сгенерировать вопросы из файла. Попробуйте другой файл.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _isGenerating = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка при генерации вопросов: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -367,7 +431,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                             ),
                             const SizedBox(height: 8),
                             const Text(
-                              'Поддерживаемые форматы: PDF, DOCX, TXT, GIFT (демо-версия)',
+                              'Поддерживаемые форматы: TXT (PDF скоро будет добавлен)',
                               style: TextStyle(color: Colors.grey),
                             ),
                             const SizedBox(height: 16),
@@ -377,7 +441,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                                 ElevatedButton.icon(
                                   onPressed: _pickFile,
                                   icon: const Icon(Icons.upload_file),
-                                  label: const Text('Демо: Загрузить файл'),
+                                  label: const Text('Загрузить вопросы из файла'),
                                 ),
                                 ElevatedButton.icon(
                                   onPressed: _addQuestion,

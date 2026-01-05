@@ -105,3 +105,6 @@ Thumbs.db
 # Firebase Functions
 /functions/node_modules/
 /functions/.npm/
+
+#openai secret key
+lib/config/api_config.dart
